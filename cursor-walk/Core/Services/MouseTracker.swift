@@ -10,8 +10,8 @@ import Combine
 import AppKit
 
 class MouseTracker: ObservableObject {
-    /// 累計の移動ピクセル数
-    @Published var totalPixels: Double = 0.0
+    /// 累計の移動ポイント数
+    @Published var totalPoints: Double = 0.0
     
     private var lastLocation: NSPoint?
     private var globalMonitor: Any?
@@ -50,7 +50,7 @@ class MouseTracker: ObservableObject {
         }
     }
     
-    /// 座標の差分から移動距離（ピクセル）を計算する
+    /// 座標の差分から移動距離（ポイント）を計算する
     private func handleMovement(to currentLocation: NSPoint) {
         if let last = lastLocation {
             let dx = currentLocation.x - last.x
@@ -60,7 +60,7 @@ class MouseTracker: ObservableObject {
             // 画面間の瞬間移動やスリープ復帰時の異常値（500px以上）は無視する
             if distance < 500 {
                 DispatchQueue.main.async {
-                    self.totalPixels += distance
+                    self.totalPoints += distance
                 }
             }
         }
