@@ -58,14 +58,14 @@ private struct DistanceSummary: View {
                 .font(.headline)
                 .foregroundStyle(.secondary)
 
-            Text(formattedDistance(points: points))
+            Text(DistanceFormatter.formattedDistance(for: points))
                 .font(.system(size: 38, weight: .bold, design: .rounded))
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
 
             HStack(spacing: 8) {
-                if points * metersPerPoint >= 1_000 {
-                    Text(formattedMeters(points: points))
+                if DistanceFormatter.meters(for: points) >= 1_000 {
+                    Text(DistanceFormatter.formattedMeters(for: points))
                 }
 
                 Text("\(Int(points)) pts")
@@ -82,7 +82,7 @@ private struct WeeklyDistanceChart: View {
     @State private var hoveredDistance: DailyDistance?
 
     private var distanceUnit: DistanceUnit {
-        let maximumMeters = data.map { $0.points * metersPerPoint }.max() ?? 0
+        let maximumMeters = data.map { DistanceFormatter.meters(for: $0.points) }.max() ?? 0
         return maximumMeters >= 1_000 ? .kilometers : .meters
     }
 
@@ -201,7 +201,7 @@ private struct DistanceTooltip: View {
             Text(distance.day, format: .dateTime.month(.defaultDigits).day())
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-            Text(formattedDistance(points: distance.points))
+            Text(DistanceFormatter.formattedDistance(for: distance.points))
                 .font(.caption.weight(.semibold))
         }
         .padding(.horizontal, 8)
@@ -218,9 +218,9 @@ private enum DistanceUnit {
     var scale: Double {
         switch self {
         case .meters:
-            metersPerPoint
+            DistanceFormatter.metersPerPoint
         case .kilometers:
-            metersPerPoint / 1_000
+            DistanceFormatter.metersPerPoint / 1_000
         }
     }
 
@@ -232,35 +232,6 @@ private enum DistanceUnit {
             "km"
         }
     }
-}
-
-private let metersPerPoint = 0.0254 / 72.0
-
-/// ポイント単位の距離を、読みやすいセンチメートル、メートル、またはキロメートル表記へ変換する。
-///
-/// - Parameter points: 変換対象の距離（ポイント）。
-/// - Returns: 距離と単位を含む表示用文字列。
-private func formattedDistance(points: Double) -> String {
-    let meters = points * metersPerPoint
-
-    if meters >= 1_000 {
-        return "\((meters / 1_000).formatted(.number.precision(.fractionLength(2)))) km"
-    }
-
-    if meters >= 1 {
-        return "\(meters.formatted(.number.precision(.fractionLength(2)))) m"
-    }
-
-    return "\((meters * 100).formatted(.number.precision(.fractionLength(0)))) cm"
-}
-
-/// ポイント単位の距離を、小数第2位までのメートル表記へ変換する。
-///
-/// - Parameter points: 変換対象の距離（ポイント）。
-/// - Returns: 距離とメートル単位を含む表示用文字列。
-private func formattedMeters(points: Double) -> String {
-    let meters = points * metersPerPoint
-    return "\(meters.formatted(.number.precision(.fractionLength(2)))) m"
 }
 
 #Preview {
