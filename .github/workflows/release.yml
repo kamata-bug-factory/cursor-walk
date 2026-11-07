@@ -19,12 +19,15 @@ jobs:
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       TAG: ${{ github.ref_name }}
-      BUILD_DIR: ${{ runner.temp }}/cursor-walk-build
-      DIST_DIR: ${{ runner.temp }}/cursor-walk-dist
     defaults:
       run:
         shell: bash
     steps:
+      - name: Set build paths
+        run: |
+          echo "BUILD_DIR=$RUNNER_TEMP/cursor-walk-build" >> "$GITHUB_ENV"
+          echo "DIST_DIR=$RUNNER_TEMP/cursor-walk-dist" >> "$GITHUB_ENV"
+
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
