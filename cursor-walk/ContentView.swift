@@ -23,7 +23,7 @@ struct ContentView: View {
                     Label("過去7日間", systemImage: "chart.bar")
                 }
         }
-        .frame(width: 460, height: 360)
+        .frame(width: 460)
         .padding()
     }
 
@@ -67,7 +67,7 @@ private struct DistanceSummary: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity)
     }
 }
 
