@@ -67,6 +67,13 @@ final class MouseTracker: ObservableObject {
         }
     }
 
+    /// 終了前に保存予約を取り消し、最新の記録を同期的に保存する。
+    func saveBeforeQuitting() -> Bool {
+        pendingSaveWorkItem?.cancel()
+        pendingSaveWorkItem = nil
+        return saveDailyDistances()
+    }
+
     /// 指定日の移動距離をポイント単位で返す。
     ///
     /// - Parameter date: 取得対象の日付。時刻部分は無視する。

@@ -3,28 +3,56 @@
 //  cursor-walk
 //
 
+import AppKit
 import Charts
 import SwiftUI
 
 struct ContentView: View {
     @ObservedObject var mouseTracker: MouseTracker
+    @State private var showingSaveError = false
 
     private let calendar = Calendar.current
 
     var body: some View {
-        TabView {
-            DistanceSummary(points: mouseTracker.totalPoints)
-                .tabItem {
-                    Label("今日", systemImage: "cursorarrow.motionlines")
-                }
+        VStack(spacing: 12) {
+            TabView {
+                DistanceSummary(points: mouseTracker.totalPoints)
+                    .tabItem {
+                        Label("今日", systemImage: "cursorarrow.motionlines")
+                    }
 
-            WeeklyDistanceChart(data: chartData)
-                .tabItem {
-                    Label("過去7日間", systemImage: "chart.bar")
+                WeeklyDistanceChart(data: chartData)
+                    .tabItem {
+                        Label("過去7日間", systemImage: "chart.bar")
+                    }
+            }
+
+            Divider()
+
+            HStack {
+                Spacer()
+                Button("終了") {
+                    guard mouseTracker.saveBeforeQuitting() else {
+                        showingSaveError = true
+                        return
+                    }
+                    mouseTracker.stopTracking()
+                    NSApplication.shared.terminate(nil)
                 }
+                .keyboardShortcut("q", modifiers: .command)
+            }
         }
         .frame(width: 460)
         .padding()
+        .alert("記録を保存できませんでした", isPresented: $showingSaveError) {
+            Button("キャンセル", role: .cancel) {}
+            Button("強制終了", role: .destructive) {
+                mouseTracker.stopTracking()
+                NSApplication.shared.terminate(nil)
+            }
+        } message: {
+            Text("空き容量や保存先のアクセス権を確認して、もう一度お試しください。強制終了すると、未保存の記録は失われます。")
+        }
     }
 
     private var chartData: [DailyDistance] {
