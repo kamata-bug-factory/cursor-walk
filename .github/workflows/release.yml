@@ -60,9 +60,9 @@ jobs:
 
       - name: Verify and package app
         run: |
-          APP="$BUILD_DIR/cursor-walk.app"
+          APP="$BUILD_DIR/CursorWalk.app"
           test -d "$APP"
-          lipo "$APP/Contents/MacOS/cursor-walk" -verify_arch arm64
+          lipo "$APP/Contents/MacOS/CursorWalk" -verify_arch arm64
           codesign --verify --deep --strict --verbose=2 "$APP"
           mkdir -p "$DIST_DIR"
           ditto -c -k --sequesterRsrc --keepParent \
@@ -81,7 +81,7 @@ jobs:
           ## インストール
 
           1. Assetsの \`cursor-walk-$TAG-macos-arm64.zip\` をダウンロードして展開します。
-          2. \`cursor-walk.app\` を「アプリケーション」フォルダへ移動して起動します。
+          2. \`CursorWalk.app\` を「アプリケーション」フォルダへ移動して起動します。
           3. 「システム設定」→「プライバシーとセキュリティ」→「アクセシビリティ」でアプリを許可します。
 
           対応環境：macOS 26.0以降、Apple Silicon搭載Mac。
