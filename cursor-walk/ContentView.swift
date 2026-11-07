@@ -12,9 +12,16 @@ struct ContentView: View {
     private let calendar = Calendar.current
 
     var body: some View {
-        VStack(spacing: 20) {
+        TabView {
             DistanceSummary(points: mouseTracker.totalPoints)
+                .tabItem {
+                    Label("今日", systemImage: "cursorarrow.motionlines")
+                }
+
             WeeklyDistanceChart(data: chartData)
+                .tabItem {
+                    Label("過去7日間", systemImage: "chart.bar")
+                }
         }
         .frame(width: 460, height: 360)
         .padding()
@@ -60,6 +67,7 @@ private struct DistanceSummary: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
