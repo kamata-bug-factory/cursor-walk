@@ -12,16 +12,13 @@ CursorWalkは、カーソルの移動距離を記録するmacOS向けのメニ�
 
 ## 動作環境
 
-- macOS 26.6以降（現在のアプリターゲットの設定）
-- ビルドには、上記ターゲットに対応したmacOS SDKを含むXcodeが必要となる。
+- macOS 26.0以降（現在のアプリターゲットの設定）
 
-## ビルドと起動
+## インストールと起動
 
-1. このリポジトリをダウンロード、またはクローンする。
-2. `cursor-walk.xcodeproj` をXcodeで開く。
-3. スキームに `cursor-walk`、実行先に `My Mac` を選択する。
-4. 必要に応じて、ターゲットの「Signing & Capabilities」で署名設定を調整する。
-5. `⌘R` でビルドして起動する。
+ビルド済みアプリは、GitHubのこのリポジトリの「Releases」から `cursor-walk-vX.Y.Z-macos-arm64.zip` をダウンロードし、展開した `cursor-walk.app` をApplicationsフォルダへ移動して起動する。
+
+配布アプリはApple Silicon対応。Appleの公証を行っていないため、初回起動がブロックされた場合は「システム設定」→「プライバシーとセキュリティ」から起動を許可する。
 
 起動するとメニューバーにカーソルのアイコンが表示され、自動的に計測を開始する。Dockには表示されない。
 
@@ -58,3 +55,14 @@ CursorWalkは、カーソルの移動距離を記録するmacOS向けのメニ�
 - カーソルの座標履歴は保存しない。外部サーバーへの送信処理もない。
 
 UIにはSwiftUI、グラフにはSwift Charts、マウスイベントの取得にはAppKitを使用している。
+
+## リリース手順（開発者向け）
+
+公開したいコミットをGitHubへpushし、`vMAJOR.MINOR.PATCH` 形式のタグを付けてpushする。
+
+```sh
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+GitHub Actionsがアプリをビルドし、ZIPを添付したGitHub Releaseを自動公開する。

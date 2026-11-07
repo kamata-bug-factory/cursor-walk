@@ -1,0 +1,90 @@
+name: Release macOS app
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      TAG: ${{ github.ref_name }}
+      BUILD_DIR: ${{ runner.temp }}/cursor-walk-build
+      DIST_DIR: ${{ runner.temp }}/cursor-walk-dist
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Validate release tag
+        run: |
+          if [[ ! "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo '::error::Release tags must use vMAJOR.MINOR.PATCH (for example v1.0.0).'
+            exit 1
+          fi
+
+      - name: Build Apple Silicon macOS app
+        run: |
+          xcodebuild -version
+          xcodebuild \
+            -project cursor-walk.xcodeproj \
+            -target cursor-walk \
+            -configuration Release \
+            -sdk macosx \
+            CONFIGURATION_BUILD_DIR="$BUILD_DIR" \
+            OBJROOT="$RUNNER_TEMP/cursor-walk-objects" \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY=- \
+            DEVELOPMENT_TEAM= \
+            MARKETING_VERSION="${TAG#v}" \
+            CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
+            build
+
+      - name: Verify and package app
+        run: |
+          APP="$BUILD_DIR/cursor-walk.app"
+          test -d "$APP"
+          lipo -verify_arch arm64 "$APP/Contents/MacOS/cursor-walk"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          mkdir -p "$DIST_DIR"
+          ditto -c -k --sequesterRsrc --keepParent \
+            "$APP" "$DIST_DIR/cursor-walk-$TAG-macos-arm64.zip"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          ZIP="$DIST_DIR/cursor-walk-$TAG-macos-arm64.zip"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" "$ZIP" --clobber
+          else
+            cat > "$RUNNER_TEMP/release-notes.md" <<'EOF'
+          ## インストール
+          Assetsの `cursor-walk-*-macos-arm64.zip` をダウンロードし、展開した `cursor-walk.app` をApplicationsフォルダへ移動してください。
+
+          - macOS 26.0以降。Apple Silicon対応。
+          - アドホック署名のみで、Developer ID署名・Appleの公証は行っていません。信頼できる配布元であることを確認したうえで、必要に応じてシステム設定の「プライバシーとセキュリティ」から起動を許可してください。
+          - アプリ外のマウス移動を計測するには、アクセシビリティの許可が必要です。更新後に再許可が必要になる場合があります。
+          EOF
+          gh release create "$TAG" "$ZIP" \
+            --verify-tag \
+            --title "CursorWalk $TAG" \
+            --notes-file "$RUNNER_TEMP/release-notes.md" \
+            --generate-notes
+          fi
