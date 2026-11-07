@@ -7,7 +7,7 @@ import Charts
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var mouseTracker = MouseTracker()
+    @ObservedObject var mouseTracker: MouseTracker
 
     private let calendar = Calendar.current
 
@@ -245,5 +245,5 @@ private func formattedDistance(points: Double) -> String {
 }
 
 #Preview {
-    ContentView()
+    ContentView(mouseTracker: MouseTracker())
 }
