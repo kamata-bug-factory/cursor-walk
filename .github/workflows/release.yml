@@ -77,17 +77,20 @@ jobs:
           if gh release view "$TAG" > /dev/null 2>&1; then
             gh release upload "$TAG" "$ZIP" --clobber
           else
-            cat > "$RUNNER_TEMP/release-notes.md" <<'EOF'
+            cat > "$RUNNER_TEMP/release-notes.md" <<EOF
           ## インストール
-          Assetsの `cursor-walk-*-macos-arm64.zip` をダウンロードし、展開した `cursor-walk.app` をApplicationsフォルダへ移動してください。
 
-          - macOS 26.0以降。Apple Silicon対応。
-          - アドホック署名のみで、Developer ID署名・Appleの公証は行っていません。信頼できる配布元であることを確認したうえで、必要に応じてシステム設定の「プライバシーとセキュリティ」から起動を許可してください。
-          - アプリ外のマウス移動を計測するには、アクセシビリティの許可が必要です。更新後に再許可が必要になる場合があります。
+          1. Assetsの \`cursor-walk-$TAG-macos-arm64.zip\` をダウンロードして展開します。
+          2. \`cursor-walk.app\` を「アプリケーション」フォルダへ移動して起動します。
+          3. 「システム設定」→「プライバシーとセキュリティ」→「アクセシビリティ」でアプリを許可します。
+
+          対応環境：macOS 26.0以降、Apple Silicon搭載Mac。
+
+          Appleの公証を受けていないため、初回起動がブロックされる場合があります。配布元を確認したうえで、「プライバシーとセキュリティ」から起動を許可してください。
           EOF
           gh release create "$TAG" "$ZIP" \
             --verify-tag \
-            --title "CursorWalk $TAG" \
+            --title "$TAG" \
             --notes-file "$RUNNER_TEMP/release-notes.md" \
             --generate-notes
           fi
