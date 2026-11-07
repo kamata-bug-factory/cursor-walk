@@ -65,6 +65,7 @@ private struct DistanceSummary: View {
 
 private struct WeeklyDistanceChart: View {
     let data: [DailyDistance]
+    @State private var hoveredDistance: DailyDistance?
 
     private var distanceUnit: DistanceUnit {
         let maximumMeters = data.map { $0.points * metersPerPoint }.max() ?? 0
@@ -85,6 +86,45 @@ private struct WeeklyDistanceChart: View {
                     Calendar.current.isDateInToday(distance.day) ? Color.accentColor : Color.secondary
                 )
                 .cornerRadius(4)
+            }
+            .chartOverlay { proxy in
+                GeometryReader { geometry in
+                    Rectangle()
+                        .fill(.clear)
+                        .contentShape(Rectangle())
+                        .onContinuousHover { phase in
+                            switch phase {
+                            case .active(let location):
+                                updateHoveredDistance(
+                                    at: location,
+                                    proxy: proxy,
+                                    geometry: geometry
+                                )
+                            case .ended:
+                                hoveredDistance = nil
+                            }
+                        }
+                }
+            }
+            .chartOverlay { proxy in
+                GeometryReader { geometry in
+                    if let hoveredDistance,
+                       let barCenter = Calendar.current.date(
+                        byAdding: .hour,
+                        value: 12,
+                        to: hoveredDistance.day
+                       ),
+                       let xPosition = proxy.position(forX: barCenter),
+                       let plotAreaFrame = proxy.plotFrame {
+                        let plotFrame = geometry[plotAreaFrame]
+
+                        DistanceTooltip(distance: hoveredDistance)
+                            .position(
+                                x: plotFrame.origin.x + xPosition,
+                                y: plotFrame.minY + 16
+                            )
+                    }
+                }
             }
             .chartXAxis {
                 AxisMarks(values: .stride(by: .day)) { value in
@@ -108,6 +148,52 @@ private struct WeeklyDistanceChart: View {
             .frame(height: 190)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// ポインタ位置に対応する日付を特定し、ツールチップの表示対象を更新する。
+    ///
+    /// - Parameters:
+    ///   - location: チャート上のポインタ位置。
+    ///   - proxy: 座標とデータ値を相互変換するチャートプロキシ。
+    ///   - geometry: チャートのプロット領域を取得するためのジオメトリプロキシ。
+    private func updateHoveredDistance(
+        at location: CGPoint,
+        proxy: ChartProxy,
+        geometry: GeometryProxy
+    ) {
+        guard
+            let plotAreaFrame = proxy.plotFrame,
+            geometry[plotAreaFrame].contains(location),
+            let date = proxy.value(
+                atX: location.x - geometry[plotAreaFrame].origin.x,
+                as: Date.self
+            )
+        else {
+            hoveredDistance = nil
+            return
+        }
+
+        hoveredDistance = data.min {
+            abs($0.day.timeIntervalSince(date)) < abs($1.day.timeIntervalSince(date))
+        }
+    }
+}
+
+private struct DistanceTooltip: View {
+    let distance: DailyDistance
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(distance.day, format: .dateTime.month(.defaultDigits).day())
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(formattedDistance(points: distance.points))
+                .font(.caption.weight(.semibold))
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 6))
+        .allowsHitTesting(false)
     }
 }
 
@@ -136,6 +222,10 @@ private enum DistanceUnit {
 
 private let metersPerPoint = 0.0254 / 72.0
 
+/// ポイント単位の距離を、読みやすいメートルまたはキロメートル表記へ変換する。
+///
+/// - Parameter points: 変換対象の距離（ポイント）。
+/// - Returns: 距離と単位を含む表示用文字列。
 private func formattedDistance(points: Double) -> String {
     let meters = points * metersPerPoint
 
