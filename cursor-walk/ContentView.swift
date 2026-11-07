@@ -63,9 +63,15 @@ private struct DistanceSummary: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
 
-            Text("\(Int(points)) pts")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                if points * metersPerPoint >= 1_000 {
+                    Text(formattedMeters(points: points))
+                }
+
+                Text("\(Int(points)) pts")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
     }
@@ -230,7 +236,7 @@ private enum DistanceUnit {
 
 private let metersPerPoint = 0.0254 / 72.0
 
-/// ポイント単位の距離を、読みやすいメートルまたはキロメートル表記へ変換する。
+/// ポイント単位の距離を、読みやすいセンチメートル、メートル、またはキロメートル表記へ変換する。
 ///
 /// - Parameter points: 変換対象の距離（ポイント）。
 /// - Returns: 距離と単位を含む表示用文字列。
@@ -238,10 +244,23 @@ private func formattedDistance(points: Double) -> String {
     let meters = points * metersPerPoint
 
     if meters >= 1_000 {
-        return String(format: "%.2f km", meters / 1_000)
+        return "\((meters / 1_000).formatted(.number.precision(.fractionLength(2)))) km"
     }
 
-    return String(format: "%.0f m", meters)
+    if meters >= 1 {
+        return "\(meters.formatted(.number.precision(.fractionLength(2)))) m"
+    }
+
+    return "\((meters * 100).formatted(.number.precision(.fractionLength(0)))) cm"
+}
+
+/// ポイント単位の距離を、小数第2位までのメートル表記へ変換する。
+///
+/// - Parameter points: 変換対象の距離（ポイント）。
+/// - Returns: 距離とメートル単位を含む表示用文字列。
+private func formattedMeters(points: Double) -> String {
+    let meters = points * metersPerPoint
+    return "\(meters.formatted(.number.precision(.fractionLength(2)))) m"
 }
 
 #Preview {
