@@ -62,7 +62,7 @@ jobs:
         run: |
           APP="$BUILD_DIR/cursor-walk.app"
           test -d "$APP"
-          lipo -verify_arch arm64 "$APP/Contents/MacOS/cursor-walk"
+          lipo "$APP/Contents/MacOS/cursor-walk" -verify_arch arm64
           codesign --verify --deep --strict --verbose=2 "$APP"
           mkdir -p "$DIST_DIR"
           ditto -c -k --sequesterRsrc --keepParent \
