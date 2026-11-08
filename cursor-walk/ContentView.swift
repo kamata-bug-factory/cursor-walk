@@ -9,20 +9,28 @@ import SwiftUI
 /// 移動距離を確認するメイン画面。
 struct ContentView: View {
     @ObservedObject var mouseTracker: MouseTracker
+    let onClose: () -> Void
 
     private let calendar = Calendar.current
 
     var body: some View {
-        TabView {
-            DistanceSummary(points: mouseTracker.totalPoints)
-                .tabItem {
-                    Label("今日", systemImage: "cursorarrow.motionlines")
-                }
+        VStack(spacing: 12) {
+            TabView {
+                DistanceSummary(points: mouseTracker.totalPoints)
+                    .tabItem {
+                        Label("今日", systemImage: "cursorarrow.motionlines")
+                    }
 
-            WeeklyDistanceChart(data: chartData)
-                .tabItem {
-                    Label("過去7日間", systemImage: "chart.bar")
-                }
+                WeeklyDistanceChart(data: chartData)
+                    .tabItem {
+                        Label("過去7日間", systemImage: "chart.bar")
+                    }
+            }
+
+            HStack {
+                Spacer()
+                Button("閉じる", action: onClose)
+            }
         }
         .frame(width: 460)
         .padding()
@@ -240,5 +248,5 @@ private enum DistanceUnit {
 }
 
 #Preview {
-    ContentView(mouseTracker: MouseTracker())
+    ContentView(mouseTracker: MouseTracker(), onClose: {})
 }

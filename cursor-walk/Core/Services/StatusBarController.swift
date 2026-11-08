@@ -14,7 +14,9 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         popover.behavior = .transient
         popover.contentViewController = NSHostingController(
-            rootView: ContentView(mouseTracker: mouseTracker)
+            rootView: ContentView(mouseTracker: mouseTracker) { [weak self] in
+                self?.popover.performClose(nil)
+            }
         )
 
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
