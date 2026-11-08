@@ -4,7 +4,8 @@ import SwiftUI
 /// メニューバーでの操作とアプリのライフサイクルを管理する。
 @MainActor
 final class StatusBarController: NSObject, NSApplicationDelegate {
-    private let mouseTracker = MouseTracker()
+    private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+    private lazy var mouseTracker = MouseTracker()
     private var statusItem: NSStatusItem?
     private let popover = NSPopover()
 
@@ -12,6 +13,11 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
     ///
     /// - Parameter notification: アプリの起動完了通知。
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // プレビューのホストではメニューバーUIや実際の計測を開始しない。
+        guard !isPreview else {
+            return
+        }
+
         popover.behavior = .transient
         popover.contentViewController = NSHostingController(
             rootView: ContentView(mouseTracker: mouseTracker) { [weak self] in
@@ -80,6 +86,8 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
     /// - Returns: 保存成功時または強制終了を選んだ場合は `.terminateNow`、
     ///   キャンセルを選んだ場合は `.terminateCancel`。
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard !isPreview else { return .terminateNow }
+
         if mouseTracker.saveBeforeQuitting() {
             return .terminateNow
         }
@@ -99,6 +107,8 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
     ///
     /// - Parameter notification: アプリの終了直前の通知。
     func applicationWillTerminate(_ notification: Notification) {
+        guard !isPreview else { return }
+
         mouseTracker.stopTracking()
         if let statusItem {
             NSStatusBar.system.removeStatusItem(statusItem)

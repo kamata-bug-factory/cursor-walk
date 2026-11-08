@@ -30,6 +30,15 @@ final class MouseTracker: ObservableObject {
         startTracking()
     }
 
+    /// 監視やファイルへのアクセスを行わず、プレビュー用の記録を設定する。
+    ///
+    /// - Parameter previewDistances: 画面に表示する日別の移動距離。
+    init(previewDistances: [DailyDistance]) {
+        storageURL = nil
+        dailyDistances = previewDistances
+        totalPoints = points(for: .now)
+    }
+
     /// イベント監視を解除し、未保存の距離をディスクへ書き込む。
     deinit {
         stopTracking()

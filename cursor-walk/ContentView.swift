@@ -247,6 +247,35 @@ private enum DistanceUnit {
     }
 }
 
-#Preview {
-    ContentView(mouseTracker: MouseTracker(), onClose: {})
+/// プレビューに表示するサンプル記録。
+private enum PreviewData {
+    static var dailyDistances: [DailyDistance] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: .now)
+        let meters: [Double] = [120, 340, 1_250, 520, 260, 410, 1_800]
+
+        return meters.enumerated().compactMap { offset, meters in
+            guard let day = calendar.date(byAdding: .day, value: offset - 6, to: today) else {
+                return nil
+            }
+            return DailyDistance(
+                day: day,
+                points: meters / DistanceFormatter.metersPerPoint
+            )
+        }
+    }
+}
+
+#Preview("記録あり") {
+    ContentView(
+        mouseTracker: MouseTracker(previewDistances: PreviewData.dailyDistances),
+        onClose: {}
+    )
+}
+
+#Preview("記録なし") {
+    ContentView(
+        mouseTracker: MouseTracker(previewDistances: []),
+        onClose: {}
+    )
 }
