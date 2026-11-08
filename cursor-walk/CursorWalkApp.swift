@@ -5,14 +5,14 @@
 
 import SwiftUI
 
+/// CursorWalkアプリのエントリーポイント。
 @main
 struct CursorWalkApp: App {
-    @StateObject private var mouseTracker = MouseTracker()
+    @NSApplicationDelegateAdaptor(StatusBarController.self) private var statusBarController
 
     var body: some Scene {
-        MenuBarExtra("CursorWalk", systemImage: "cursorarrow.motionlines") {
-            ContentView(mouseTracker: mouseTracker)
+        Settings {
+            EmptyView()
         }
-        .menuBarExtraStyle(.window)
     }
 }

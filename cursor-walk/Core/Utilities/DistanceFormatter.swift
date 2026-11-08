@@ -5,7 +5,7 @@
 
 import Foundation
 
-/// カーソル移動ポイントを実距離へ換算し、表示用の文字列を生成する。
+/// 移動距離の単位換算と表示形式をまとめたユーティリティ。
 enum DistanceFormatter {
     /// 1ポイントあたりの距離（メートル）。
     static let metersPerPoint = 0.0254 / 72.0

@@ -7,6 +7,7 @@ import AppKit
 import Combine
 import Foundation
 
+/// マウスの移動距離を計測・管理する。
 final class MouseTracker: ObservableObject {
     /// 今日の累計移動ポイント数
     @Published private(set) var totalPoints: Double = 0.0
@@ -225,6 +226,7 @@ final class MouseTracker: ObservableObject {
     }
 }
 
+/// 1日分の移動距離の記録。
 struct DailyDistance: Codable, Equatable, Identifiable {
     let day: Date
     var points: Double

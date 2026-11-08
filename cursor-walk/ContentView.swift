@@ -3,56 +3,29 @@
 //  cursor-walk
 //
 
-import AppKit
 import Charts
 import SwiftUI
 
+/// 移動距離を確認するメイン画面。
 struct ContentView: View {
     @ObservedObject var mouseTracker: MouseTracker
-    @State private var showingSaveError = false
 
     private let calendar = Calendar.current
 
     var body: some View {
-        VStack(spacing: 12) {
-            TabView {
-                DistanceSummary(points: mouseTracker.totalPoints)
-                    .tabItem {
-                        Label("今日", systemImage: "cursorarrow.motionlines")
-                    }
-
-                WeeklyDistanceChart(data: chartData)
-                    .tabItem {
-                        Label("過去7日間", systemImage: "chart.bar")
-                    }
-            }
-
-            Divider()
-
-            HStack {
-                Spacer()
-                Button("終了") {
-                    guard mouseTracker.saveBeforeQuitting() else {
-                        showingSaveError = true
-                        return
-                    }
-                    mouseTracker.stopTracking()
-                    NSApplication.shared.terminate(nil)
+        TabView {
+            DistanceSummary(points: mouseTracker.totalPoints)
+                .tabItem {
+                    Label("今日", systemImage: "cursorarrow.motionlines")
                 }
-                .keyboardShortcut("q", modifiers: .command)
-            }
+
+            WeeklyDistanceChart(data: chartData)
+                .tabItem {
+                    Label("過去7日間", systemImage: "chart.bar")
+                }
         }
         .frame(width: 460)
         .padding()
-        .alert("記録を保存できませんでした", isPresented: $showingSaveError) {
-            Button("キャンセル", role: .cancel) {}
-            Button("強制終了", role: .destructive) {
-                mouseTracker.stopTracking()
-                NSApplication.shared.terminate(nil)
-            }
-        } message: {
-            Text("空き容量や保存先のアクセス権を確認して、もう一度お試しください。強制終了すると、未保存の記録は失われます。")
-        }
     }
 
     private var chartData: [DailyDistance] {
@@ -77,6 +50,7 @@ struct ContentView: View {
     }
 }
 
+/// 今日の移動距離を表示するビュー。
 private struct DistanceSummary: View {
     let points: Double
 
@@ -105,6 +79,7 @@ private struct DistanceSummary: View {
     }
 }
 
+/// 直近7日間の移動距離を表示するグラフ。
 private struct WeeklyDistanceChart: View {
     let data: [DailyDistance]
     @State private var hoveredDistance: DailyDistance?
@@ -221,6 +196,7 @@ private struct WeeklyDistanceChart: View {
     }
 }
 
+/// 日別の移動距離を示すツールチップ。
 private struct DistanceTooltip: View {
     let distance: DailyDistance
 
@@ -239,6 +215,7 @@ private struct DistanceTooltip: View {
     }
 }
 
+/// グラフで使用する距離の単位。
 private enum DistanceUnit {
     case meters
     case kilometers
