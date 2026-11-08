@@ -82,7 +82,6 @@ jobs:
 
           1. Assetsの \`cursor-walk-$TAG-macos-arm64.zip\` をダウンロードして展開します。
           2. \`CursorWalk.app\` を「アプリケーション」フォルダへ移動して起動します。
-          3. 「システム設定」→「プライバシーとセキュリティ」→「アクセシビリティ」でアプリを許可します。
 
           対応環境：macOS 26.0以降、Apple Silicon搭載Mac。
 
