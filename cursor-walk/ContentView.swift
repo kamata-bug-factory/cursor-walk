@@ -7,6 +7,8 @@ import SwiftUI
 
 /// 移動距離を確認するメイン画面。
 struct ContentView: View {
+    private static let chartDisplayDays = 7
+
     @ObservedObject var mouseTracker: MouseTracker
     let onClose: () -> Void
 
@@ -38,13 +40,13 @@ struct ContentView: View {
     private var chartData: [DailyDistance] {
         guard let firstDay = calendar.date(
             byAdding: .day,
-            value: -6,
+            value: -(Self.chartDisplayDays - 1),
             to: calendar.startOfDay(for: .now)
         ) else {
             return []
         }
 
-        return (0..<7).compactMap { offset in
+        return (0..<Self.chartDisplayDays).compactMap { offset in
             guard let day = calendar.date(byAdding: .day, value: offset, to: firstDay) else {
                 return nil
             }
