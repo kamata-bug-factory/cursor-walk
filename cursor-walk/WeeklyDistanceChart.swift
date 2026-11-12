@@ -6,18 +6,29 @@
 import Charts
 import SwiftUI
 
-/// 直近7日間の移動距離を表示するグラフ。
+/// 直近7日間の移動距離を、前の7日間と比較して表示するグラフ。
 struct WeeklyDistanceChart: View {
-    let data: [DailyDistance]
-    @State private var hoveredDistance: DailyDistance?
+    let currentWeek: [DailyDistance]
+    let previousWeek: [DailyDistance]
+    @State private var hoveredDistance: DailyDistanceComparison?
+
+    private var comparisonData: [DailyDistanceComparison] {
+        zip(currentWeek, previousWeek).map { current, previous in
+            DailyDistanceComparison(
+                day: current.day,
+                currentPoints: current.points,
+                previousPoints: previous.points
+            )
+        }
+    }
 
     private var distanceUnit: DistanceUnit {
-        let maximumMeters = data.map { DistanceFormatter.meters(for: $0.points) }.max() ?? 0
-        return maximumMeters >= 1_000 ? .kilometers : .meters
+        let maximumPoints = (currentWeek + previousWeek).map(\.points).max() ?? 0
+        return DistanceFormatter.meters(for: maximumPoints) >= 1_000 ? .kilometers : .meters
     }
 
     private var axisConfiguration: DistanceAxisConfiguration {
-        let maximumValue = data
+        let maximumValue = (currentWeek + previousWeek)
             .map { $0.points * distanceUnit.scale }
             .max() ?? 0
         return DistanceAxisConfiguration(maximumValue: maximumValue)
@@ -28,10 +39,21 @@ struct WeeklyDistanceChart: View {
             Text("過去7日間")
                 .font(.headline)
 
-            Chart(data) { distance in
+            Chart(comparisonData) { distance in
                 BarMark(
                     x: .value("日付", distance.day, unit: .day),
-                    y: .value("移動距離", distance.points * distanceUnit.scale)
+                    yStart: .value("先週の開始位置", 0),
+                    yEnd: .value("先週の移動距離", distance.previousPoints * distanceUnit.scale),
+                    width: .fixed(28)
+                )
+                .foregroundStyle(Color.secondary.opacity(0.32))
+                .cornerRadius(4)
+
+                BarMark(
+                    x: .value("日付", distance.day, unit: .day),
+                    yStart: .value("今週の開始位置", 0),
+                    yEnd: .value("今週の移動距離", distance.currentPoints * distanceUnit.scale),
+                    width: .fixed(22)
                 )
                 .foregroundStyle(
                     Calendar.current.isDateInToday(distance.day) ? Color.accentColor : Color.secondary
@@ -72,7 +94,7 @@ struct WeeklyDistanceChart: View {
                         DistanceTooltip(distance: hoveredDistance)
                             .position(
                                 x: plotFrame.origin.x + xPosition,
-                                y: plotFrame.minY + 16
+                                y: plotFrame.minY + 38
                             )
                     }
                 }
@@ -84,15 +106,7 @@ struct WeeklyDistanceChart: View {
 
                     if let date = value.as(Date.self) {
                         AxisValueLabel {
-                            Text(
-                                date.formatted(
-                                    .dateTime
-                                        .month(.defaultDigits)
-                                        .day()
-                                        .weekday(.abbreviated)
-                                        .locale(Locale(identifier: "ja_JP"))
-                                )
-                            )
+                            Text(WeeklyChartDateFormat.string(from: date))
                         }
                     }
                 }
@@ -133,28 +147,67 @@ struct WeeklyDistanceChart: View {
             return
         }
 
-        hoveredDistance = data.min {
+        hoveredDistance = comparisonData.min {
             abs($0.day.timeIntervalSince(date)) < abs($1.day.timeIntervalSince(date))
         }
     }
 }
 
-/// 日別の移動距離を示すツールチップ。
+private struct DailyDistanceComparison: Identifiable {
+    let day: Date
+    let currentPoints: Double
+    let previousPoints: Double
+
+    var id: Date { day }
+}
+
+private enum WeeklyChartDateFormat {
+    static let style = Date.FormatStyle()
+        .month(.defaultDigits)
+        .day()
+        .weekday(.abbreviated)
+        .locale(Locale(identifier: "ja_JP"))
+
+    static func string(from date: Date) -> String {
+        date.formatted(style)
+    }
+}
+
+/// 日別の移動距離と先週比を示すツールチップ。
 private struct DistanceTooltip: View {
-    let distance: DailyDistance
+    let distance: DailyDistanceComparison
 
     var body: some View {
-        VStack(spacing: 2) {
-            Text(distance.day, format: .dateTime.month(.defaultDigits).day())
+        VStack(alignment: .leading, spacing: 2) {
+            Text(WeeklyChartDateFormat.string(from: distance.day))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-            Text(DistanceFormatter.formattedDistance(for: distance.points))
+
+            Text(DistanceFormatter.formattedDistance(for: distance.currentPoints))
                 .font(.caption.weight(.semibold))
+
+            Text("先週 \(DistanceFormatter.formattedDistance(for: distance.previousPoints))")
+                .font(.caption2)
+
+            Text(comparisonText)
+                .font(.caption2.weight(.semibold))
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 6))
         .allowsHitTesting(false)
+    }
+
+    private var comparisonText: LocalizedStringResource {
+        guard distance.previousPoints > 0 else {
+            return "先週比 -"
+        }
+
+        let percentage = Int(
+            ((distance.currentPoints - distance.previousPoints) / distance.previousPoints * 100)
+                .rounded()
+        )
+        return "先週比 \(percentage, format: .number.sign(strategy: .always()))%"
     }
 }
 

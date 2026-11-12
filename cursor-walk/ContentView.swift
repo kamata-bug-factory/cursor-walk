@@ -22,7 +22,10 @@ struct ContentView: View {
                         Label("今日", systemImage: "cursorarrow.motionlines")
                     }
 
-                WeeklyDistanceChart(data: chartData)
+                WeeklyDistanceChart(
+                    currentWeek: currentWeekData,
+                    previousWeek: previousWeekData
+                )
                     .tabItem {
                         Label("過去7日間", systemImage: "chart.bar")
                     }
@@ -37,10 +40,18 @@ struct ContentView: View {
         .padding()
     }
 
-    private var chartData: [DailyDistance] {
+    private var currentWeekData: [DailyDistance] {
+        chartData(startingDaysAgo: Self.chartDisplayDays - 1)
+    }
+
+    private var previousWeekData: [DailyDistance] {
+        chartData(startingDaysAgo: Self.chartDisplayDays * 2 - 1)
+    }
+
+    private func chartData(startingDaysAgo daysAgo: Int) -> [DailyDistance] {
         guard let firstDay = calendar.date(
             byAdding: .day,
-            value: -(Self.chartDisplayDays - 1),
+            value: -daysAgo,
             to: calendar.startOfDay(for: .now)
         ) else {
             return []
@@ -94,10 +105,13 @@ private enum PreviewData {
     static var dailyDistances: [DailyDistance] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: .now)
-        let meters: [Double] = [120, 340, 1_250, 520, 260, 410, 1_800]
+        let meters: [Double] = [
+            180, 280, 900, 610, 320, 470, 1_200,
+            120, 340, 1_250, 520, 260, 410, 1_800
+        ]
 
         return meters.enumerated().compactMap { offset, meters in
-            guard let day = calendar.date(byAdding: .day, value: offset - 6, to: today) else {
+            guard let day = calendar.date(byAdding: .day, value: offset - 13, to: today) else {
                 return nil
             }
             return DailyDistance(
