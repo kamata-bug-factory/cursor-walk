@@ -147,8 +147,9 @@ struct WeeklyDistanceChart: View {
             return
         }
 
-        hoveredDistance = comparisonData.min {
-            abs($0.day.timeIntervalSince(date)) < abs($1.day.timeIntervalSince(date))
+        let calendar = Calendar.current
+        hoveredDistance = comparisonData.first {
+            calendar.isDate($0.day, inSameDayAs: date)
         }
     }
 }
