@@ -84,7 +84,15 @@ struct WeeklyDistanceChart: View {
 
                     if let date = value.as(Date.self) {
                         AxisValueLabel {
-                            Text(date, format: .dateTime.month(.defaultDigits).day())
+                            Text(
+                                date.formatted(
+                                    .dateTime
+                                        .month(.defaultDigits)
+                                        .day()
+                                        .weekday(.abbreviated)
+                                        .locale(Locale(identifier: "ja_JP"))
+                                )
+                            )
                         }
                     }
                 }
