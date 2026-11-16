@@ -24,6 +24,8 @@ final class MouseTracker: ObservableObject {
     private var globalMonitor: Any?
     private var localMonitor: Any?
     private var pendingSaveWorkItem: DispatchWorkItem?
+    private var currentDay: Date?
+    private var currentDayIndex: Int?
 
     /// 保存済みの日別距離を復元して、マウス移動の監視を開始する。
     init() {
@@ -126,19 +128,39 @@ final class MouseTracker: ObservableObject {
     ///   - date: 距離を記録する日時。
     private func record(distance: Double, at date: Date) {
         let day = calendar.startOfDay(for: date)
-        pruneDistances(keepingFrom: day)
-
-        if let index = dailyDistances.firstIndex(where: {
-            calendar.isDate($0.day, inSameDayAs: day)
-        }) {
-            dailyDistances[index].points += distance
-        } else {
-            dailyDistances.append(DailyDistance(day: day, points: distance))
+        guard let index = indexForCurrentDay(day) else {
+            return
         }
 
-        dailyDistances.sort { $0.day < $1.day }
-        totalPoints = points(for: day)
+        dailyDistances[index].points += distance
+        totalPoints = dailyDistances[index].points
         scheduleSave()
+    }
+
+    /// 当日の記録位置を返す。履歴の整理と検索は日付が変わったときだけ行う。
+    private func indexForCurrentDay(_ day: Date) -> Int? {
+        if currentDay == day, let currentDayIndex {
+            return currentDayIndex
+        }
+
+        pruneDistances(keepingFrom: day)
+
+        if let index = dailyDistances.firstIndex(where: { $0.day == day }) {
+            currentDay = day
+            currentDayIndex = index
+            return index
+        }
+
+        dailyDistances.append(DailyDistance(day: day, points: 0))
+        dailyDistances.sort { $0.day < $1.day }
+
+        guard let index = dailyDistances.firstIndex(where: { $0.day == day }) else {
+            return nil
+        }
+
+        currentDay = day
+        currentDayIndex = index
+        return index
     }
 
     /// Application Support内のJSONファイルから日別距離を復元する。
@@ -154,7 +176,11 @@ final class MouseTracker: ObservableObject {
         dailyDistances = decodedDistances
         let today = calendar.startOfDay(for: .now)
         pruneDistances(keepingFrom: today)
-        totalPoints = points(for: today)
+        if let index = dailyDistances.firstIndex(where: { $0.day == today }) {
+            currentDay = today
+            currentDayIndex = index
+            totalPoints = dailyDistances[index].points
+        }
     }
 
     /// 指定日を含む直近30日分以外の履歴を削除する。
