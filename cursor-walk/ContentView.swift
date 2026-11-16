@@ -7,27 +7,25 @@ import SwiftUI
 
 /// 移動距離を確認するメイン画面。
 struct ContentView: View {
-    private static let chartDisplayDays = 7
-
     @ObservedObject var mouseTracker: MouseTracker
     let onClose: () -> Void
 
-    private let calendar = Calendar.current
-
     var body: some View {
+        let weeklyDistanceData = WeeklyDistanceData(pointsForDate: mouseTracker.points(for:))
+
         VStack(spacing: 12) {
             TabView {
-                DistanceSummary(points: mouseTracker.totalPoints)
+                DistanceSummary(date: .now, points: mouseTracker.totalPoints)
                     .tabItem {
-                        Label("今日", systemImage: "cursorarrow.motionlines")
+                        Label("本日", systemImage: "cursorarrow.motionlines")
                     }
 
                 WeeklyDistanceChart(
-                    currentWeek: currentWeekData,
-                    previousWeek: previousWeekData
+                    currentWeek: weeklyDistanceData.currentWeek,
+                    previousWeek: weeklyDistanceData.previousWeek
                 )
                     .tabItem {
-                        Label("過去7日間", systemImage: "chart.bar")
+                        Label("週間", systemImage: "chart.bar")
                     }
             }
 
@@ -39,44 +37,24 @@ struct ContentView: View {
         .frame(width: 460)
         .padding()
     }
-
-    private var currentWeekData: [DailyDistance] {
-        chartData(startingDaysAgo: Self.chartDisplayDays - 1)
-    }
-
-    private var previousWeekData: [DailyDistance] {
-        chartData(startingDaysAgo: Self.chartDisplayDays * 2 - 1)
-    }
-
-    private func chartData(startingDaysAgo daysAgo: Int) -> [DailyDistance] {
-        guard let firstDay = calendar.date(
-            byAdding: .day,
-            value: -daysAgo,
-            to: calendar.startOfDay(for: .now)
-        ) else {
-            return []
-        }
-
-        return (0..<Self.chartDisplayDays).compactMap { offset in
-            guard let day = calendar.date(byAdding: .day, value: offset, to: firstDay) else {
-                return nil
-            }
-
-            return DailyDistance(
-                day: day,
-                points: mouseTracker.points(for: day)
-            )
-        }
-    }
 }
 
-/// 今日の移動距離を表示するビュー。
+/// 本日の移動距離を表示するビュー。
 private struct DistanceSummary: View {
+    private static let dateStyle = Date.FormatStyle()
+        .month(.defaultDigits)
+        .day()
+        .weekday(.abbreviated)
+        .locale(Locale(identifier: "ja_JP"))
+
+    let date: Date
     let points: Double
 
     var body: some View {
+        let formattedDate = date.formatted(Self.dateStyle)
+
         VStack(spacing: 6) {
-            Text("今日の移動距離")
+            Text("\(formattedDate)の移動距離")
                 .font(.headline)
                 .foregroundStyle(.secondary)
 

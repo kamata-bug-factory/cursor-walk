@@ -6,7 +6,7 @@
 import Charts
 import SwiftUI
 
-/// 直近7日間の移動距離を、前の7日間と比較して表示するグラフ。
+/// 今週の移動距離を、前週と比較して日曜から土曜の順に表示するグラフ。
 struct WeeklyDistanceChart: View {
     let currentWeek: [DailyDistance]
     let previousWeek: [DailyDistance]
@@ -20,6 +20,15 @@ struct WeeklyDistanceChart: View {
                 previousPoints: previous.points
             )
         }
+    }
+
+    private var weekRangeText: String {
+        guard let firstDay = currentWeek.first?.day,
+              let lastDay = currentWeek.last?.day else {
+            return "週間"
+        }
+
+        return "\(firstDay.formatted(WeeklyChartDateFormat.shortStyle))〜\(lastDay.formatted(WeeklyChartDateFormat.shortStyle))"
     }
 
     private var distanceUnit: DistanceUnit {
@@ -36,7 +45,7 @@ struct WeeklyDistanceChart: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("過去7日間")
+            Text(weekRangeText)
                 .font(.headline)
 
             Chart(comparisonData) { distance in
@@ -163,6 +172,12 @@ private struct DailyDistanceComparison: Identifiable {
 }
 
 private enum WeeklyChartDateFormat {
+    static let shortStyle = Date.FormatStyle()
+        .month(.defaultDigits)
+        .day()
+        .weekday(.abbreviated)
+        .locale(Locale(identifier: "ja_JP"))
+
     static let style = Date.FormatStyle()
         .month(.defaultDigits)
         .day()
@@ -200,7 +215,13 @@ private struct DistanceTooltip: View {
     }
 
     private var comparisonText: LocalizedStringResource {
-        guard distance.previousPoints > 0 else {
+        let isFuture = Calendar.current.compare(
+            distance.day,
+            to: .now,
+            toGranularity: .day
+        ) == .orderedDescending
+
+        guard distance.previousPoints > 0, !isFuture else {
             return "先週比 -"
         }
 
