@@ -28,7 +28,7 @@ struct WeeklyDistanceChart: View {
             return "週間"
         }
 
-        return "\(firstDay.formatted(WeeklyChartDateFormat.shortStyle))〜\(lastDay.formatted(WeeklyChartDateFormat.shortStyle))"
+        return "\(DateDisplayFormatter.monthDayWeekday(from: firstDay))〜\(DateDisplayFormatter.monthDayWeekday(from: lastDay))"
     }
 
     private var distanceUnit: DistanceUnit {
@@ -115,7 +115,7 @@ struct WeeklyDistanceChart: View {
 
                     if let date = value.as(Date.self) {
                         AxisValueLabel {
-                            Text(WeeklyChartDateFormat.string(from: date))
+                            Text(DateDisplayFormatter.monthDayWeekday(from: date))
                         }
                     }
                 }
@@ -171,31 +171,13 @@ private struct DailyDistanceComparison: Identifiable {
     var id: Date { day }
 }
 
-private enum WeeklyChartDateFormat {
-    static let shortStyle = Date.FormatStyle()
-        .month(.defaultDigits)
-        .day()
-        .weekday(.abbreviated)
-        .locale(Locale(identifier: "ja_JP"))
-
-    static let style = Date.FormatStyle()
-        .month(.defaultDigits)
-        .day()
-        .weekday(.abbreviated)
-        .locale(Locale(identifier: "ja_JP"))
-
-    static func string(from date: Date) -> String {
-        date.formatted(style)
-    }
-}
-
 /// 日別の移動距離と先週比を示すツールチップ。
 private struct DistanceTooltip: View {
     let distance: DailyDistanceComparison
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(WeeklyChartDateFormat.string(from: distance.day))
+            Text(DateDisplayFormatter.monthDayWeekday(from: distance.day))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
 
@@ -208,10 +190,7 @@ private struct DistanceTooltip: View {
             Text(comparisonText)
                 .font(.caption2.weight(.semibold))
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 6))
-        .allowsHitTesting(false)
+        .distanceTooltipStyle()
     }
 
     private var comparisonText: LocalizedStringResource {
