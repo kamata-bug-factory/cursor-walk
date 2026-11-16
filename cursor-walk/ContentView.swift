@@ -28,7 +28,10 @@ struct ContentView: View {
                         Label("週間", systemImage: "chart.bar")
                     }
 
-                MonthlyDistanceHeatmap(dailyDistances: mouseTracker.dailyDistances)
+                MonthlyDistanceHeatmap(
+                    dailyDistances: mouseTracker.dailyDistances,
+                    currentDayPoints: mouseTracker.totalPoints
+                )
                     .tabItem {
                         Label("月間", systemImage: "calendar")
                     }

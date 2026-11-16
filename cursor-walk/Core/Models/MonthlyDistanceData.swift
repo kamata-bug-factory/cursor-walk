@@ -5,20 +5,66 @@
 
 import Foundation
 
+/// 本日以外の日別移動距離と、色の強度を決める境界値。
+struct MonthlyDistanceHistory {
+    private let pointsByDay: [Date: Double]
+    private let sortedPositivePoints: [Double]
+
+    init(
+        dailyDistances: [DailyDistance],
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) {
+        let referenceDay = calendar.startOfDay(for: referenceDate)
+        pointsByDay = dailyDistances.reduce(into: [Date: Double]()) { result, distance in
+            let day = calendar.startOfDay(for: distance.day)
+            guard day != referenceDay else {
+                return
+            }
+            result[day, default: 0] += distance.points
+        }
+
+        sortedPositivePoints = pointsByDay.values
+            .filter { $0 > 0 }
+            .sorted()
+    }
+
+    func points(for day: Date, calendar: Calendar) -> Double {
+        pointsByDay[calendar.startOfDay(for: day)] ?? 0
+    }
+
+    func intensityLevel(for points: Double) -> Int {
+        guard points > 0 else {
+            return 0
+        }
+        guard !sortedPositivePoints.isEmpty else {
+            return 0
+        }
+
+        let upperRank = (sortedPositivePoints.lastIndex { $0 <= points } ?? -1) + 1
+        let percentile = Double(upperRank) / Double(sortedPositivePoints.count)
+        return min(4, Int(ceil(percentile * 4)))
+    }
+}
+
 /// 1か月分の表示日と移動距離をまとめたデータ。
 struct MonthlyDistanceData {
     let month: Date
     let days: [MonthlyDistanceDay]
     let totalPoints: Double
 
-    init(month: Date, dailyDistances: [DailyDistance], calendar: Calendar = .current) {
+    init(
+        month: Date,
+        history: MonthlyDistanceHistory,
+        currentDayPoints: Double,
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) {
         var calendar = calendar
         calendar.firstWeekday = 1
 
         let monthStart = calendar.dateInterval(of: .month, for: month)?.start ?? calendar.startOfDay(for: month)
-        let pointsByDay = dailyDistances.reduce(into: [Date: Double]()) { result, distance in
-            result[calendar.startOfDay(for: distance.day), default: 0] += distance.points
-        }
+        let referenceDay = calendar.startOfDay(for: referenceDate)
         let dayCount = calendar.range(of: .day, in: .month, for: monthStart)?.count ?? 0
         let leadingDayCount = (
             calendar.component(.weekday, from: monthStart) - calendar.firstWeekday + 7
@@ -29,25 +75,24 @@ struct MonthlyDistanceData {
             guard let date = calendar.date(byAdding: .day, value: offset - leadingDayCount, to: monthStart) else {
                 return nil
             }
+
+            let day = calendar.startOfDay(for: date)
+            let points = day == referenceDay
+                ? currentDayPoints
+                : history.points(for: day, calendar: calendar)
             return (
                 date: date,
-                points: pointsByDay[date] ?? 0,
+                points: points,
                 isInDisplayedMonth: calendar.isDate(date, equalTo: monthStart, toGranularity: .month)
             )
         }
-        let positivePointsInRetentionRange = pointsByDay.values
-            .filter { $0 > 0 }
-            .sorted()
 
         self.month = monthStart
         days = datedPoints.map { day in
             MonthlyDistanceDay(
                 date: day.date,
                 points: day.points,
-                intensityLevel: Self.intensityLevel(
-                    for: day.points,
-                    among: positivePointsInRetentionRange
-                ),
+                intensityLevel: history.intensityLevel(for: day.points),
                 isInDisplayedMonth: day.isInDisplayedMonth
             )
         }
@@ -55,16 +100,6 @@ struct MonthlyDistanceData {
             .filter(\.isInDisplayedMonth)
             .map(\.points)
             .reduce(0, +)
-    }
-
-    private static func intensityLevel(for points: Double, among sortedPositivePoints: [Double]) -> Int {
-        guard points > 0, !sortedPositivePoints.isEmpty else {
-            return 0
-        }
-
-        let upperRank = (sortedPositivePoints.lastIndex { $0 <= points } ?? -1) + 1
-        let percentile = Double(upperRank) / Double(sortedPositivePoints.count)
-        return min(4, Int(ceil(percentile * 4)))
     }
 }
 

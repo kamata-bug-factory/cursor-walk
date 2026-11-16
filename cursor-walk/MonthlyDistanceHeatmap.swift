@@ -10,10 +10,32 @@ struct MonthlyDistanceHeatmap: View {
     private static let retainedMonthOffset = -12
 
     let dailyDistances: [DailyDistance]
-    @State private var displayedMonth = Calendar.current.dateInterval(of: .month, for: .now)?.start ?? .now
+    let currentDayPoints: Double
+    @State private var displayedMonth: Date
+    @State private var history: MonthlyDistanceHistory
+
+    init(dailyDistances: [DailyDistance], currentDayPoints: Double) {
+        let referenceDate = Date.now
+
+        self.dailyDistances = dailyDistances
+        self.currentDayPoints = currentDayPoints
+        _displayedMonth = State(
+            initialValue: Calendar.current.dateInterval(of: .month, for: referenceDate)?.start ?? referenceDate
+        )
+        _history = State(
+            initialValue: MonthlyDistanceHistory(
+                dailyDistances: dailyDistances,
+                referenceDate: referenceDate
+            )
+        )
+    }
 
     var body: some View {
-        let data = MonthlyDistanceData(month: displayedMonth, dailyDistances: dailyDistances)
+        let data = MonthlyDistanceData(
+            month: displayedMonth,
+            history: history,
+            currentDayPoints: currentDayPoints
+        )
 
         VStack(alignment: .leading, spacing: 12) {
             MonthlyHeatmapHeader(
@@ -28,6 +50,13 @@ struct MonthlyDistanceHeatmap: View {
             MonthlyHeatmapContent(days: data.days)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .onChange(of: latestRecordedDay) {
+            history = MonthlyDistanceHistory(dailyDistances: dailyDistances)
+        }
+    }
+
+    private var latestRecordedDay: Date? {
+        dailyDistances.last.map { Calendar.current.startOfDay(for: $0.day) }
     }
 
     private var canMoveBackward: Bool {
@@ -54,6 +83,7 @@ struct MonthlyDistanceHeatmap: View {
         guard let month = Calendar.current.date(byAdding: .month, value: value, to: displayedMonth) else {
             return
         }
+
         displayedMonth = min(max(month, earliestMonth), currentMonth)
     }
 }
