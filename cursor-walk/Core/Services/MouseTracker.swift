@@ -9,12 +9,12 @@ import Foundation
 
 /// マウスの移動距離を計測・管理する。
 final class MouseTracker: ObservableObject {
-    private static let retentionDays = 30
+    private static let retentionDays = 400
 
     /// 今日の累計移動ポイント数
     @Published private(set) var totalPoints: Double = 0.0
 
-    /// 今日を含む直近30日間の日別移動距離
+    /// 今日を含む直近400日間の日別移動距離
     @Published private(set) var dailyDistances: [DailyDistance] = []
     
     private let calendar = Calendar.current
@@ -183,7 +183,7 @@ final class MouseTracker: ObservableObject {
         }
     }
 
-    /// 指定日を含む直近30日分以外の履歴を削除する。
+    /// 指定日を含む直近400日分以外の履歴を削除する。
     ///
     /// - Parameter currentDay: 保持期間の最終日。時刻部分は無視する。
     private func pruneDistances(keepingFrom currentDay: Date) {
