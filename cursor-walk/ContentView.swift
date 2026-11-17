@@ -36,6 +36,7 @@ struct ContentView: View {
                         Label("月間", systemImage: "calendar")
                     }
             }
+            .frame(height: 330)
 
             HStack {
                 Spacer()
