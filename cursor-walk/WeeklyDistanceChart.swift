@@ -10,6 +10,7 @@ import SwiftUI
 struct WeeklyDistanceChart: View {
     let currentWeek: [DailyDistance]
     let previousWeek: [DailyDistance]
+    let totalPoints: Double
     @State private var hoveredDistance: DailyDistanceComparison?
 
     private var comparisonData: [DailyDistanceComparison] {
@@ -20,15 +21,6 @@ struct WeeklyDistanceChart: View {
                 previousPoints: previous.points
             )
         }
-    }
-
-    private var weekRangeText: String {
-        guard let firstDay = currentWeek.first?.day,
-              let lastDay = currentWeek.last?.day else {
-            return "週間"
-        }
-
-        return "\(DateDisplayFormatter.monthDayWeekday(from: firstDay))〜\(DateDisplayFormatter.monthDayWeekday(from: lastDay))"
     }
 
     private var distanceUnit: DistanceUnit {
@@ -45,8 +37,11 @@ struct WeeklyDistanceChart: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(weekRangeText)
-                .font(.headline)
+            WeeklyChartHeader(
+                firstDay: currentWeek.first?.day,
+                lastDay: currentWeek.last?.day,
+                totalPoints: totalPoints
+            )
 
             Chart(comparisonData) { distance in
                 BarMark(
@@ -160,6 +155,30 @@ struct WeeklyDistanceChart: View {
         hoveredDistance = comparisonData.first {
             calendar.isDate($0.day, inSameDayAs: date)
         }
+    }
+}
+
+private struct WeeklyChartHeader: View {
+    let firstDay: Date?
+    let lastDay: Date?
+    let totalPoints: Double
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(weekRangeText)
+                .font(.headline)
+            Text("合計 \(DistanceFormatter.formattedDistance(for: totalPoints))")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var weekRangeText: String {
+        guard let firstDay, let lastDay else {
+            return "週間"
+        }
+
+        return "\(DateDisplayFormatter.monthDayWeekday(from: firstDay))〜\(DateDisplayFormatter.monthDayWeekday(from: lastDay))"
     }
 }
 

@@ -11,6 +11,7 @@ struct WeeklyDistanceData {
 
     let currentWeek: [DailyDistance]
     let previousWeek: [DailyDistance]
+    let totalPoints: Double
 
     init(
         calendar: Calendar = .current,
@@ -30,6 +31,7 @@ struct WeeklyDistanceData {
             calendar: calendar,
             pointsForDate: pointsForDate
         )
+        totalPoints = currentWeek.map(\.points).reduce(0, +)
 
         guard let startOfPreviousWeek = calendar.date(
             byAdding: .day,

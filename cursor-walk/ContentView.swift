@@ -22,7 +22,8 @@ struct ContentView: View {
 
                 WeeklyDistanceChart(
                     currentWeek: weeklyDistanceData.currentWeek,
-                    previousWeek: weeklyDistanceData.previousWeek
+                    previousWeek: weeklyDistanceData.previousWeek,
+                    totalPoints: weeklyDistanceData.totalPoints
                 )
                     .tabItem {
                         Label("週間", systemImage: "chart.bar")
