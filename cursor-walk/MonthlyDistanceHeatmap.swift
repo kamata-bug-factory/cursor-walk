@@ -160,6 +160,22 @@ private enum MonthlyHeatmapLayout {
     static let tooltipVerticalOffset = -(cellLength + cellSpacing)
 }
 
+private enum MonthlyHeatmapPalette {
+    private static let emptyOpacity = 0.12
+    private static let minimumIntensityOpacity = 0.06
+    private static let intensityOpacityStep = 0.235
+
+    static func color(for intensityLevel: Int) -> Color {
+        guard intensityLevel > 0 else {
+            return Color.secondary.opacity(emptyOpacity)
+        }
+
+        return Color.accentColor.opacity(
+            minimumIntensityOpacity + Double(intensityLevel) * intensityOpacityStep
+        )
+    }
+}
+
 private struct MonthlyHeatmapContent: View {
     let days: [MonthlyDistanceDay]
 
@@ -257,11 +273,7 @@ private struct MonthlyHeatmapDayCell: View {
     }
 
     private var fillColor: Color {
-        guard day.intensityLevel > 0 else {
-            return Color.secondary.opacity(0.12)
-        }
-
-        return Color.accentColor.opacity(0.22 + Double(day.intensityLevel) * 0.195)
+        MonthlyHeatmapPalette.color(for: day.intensityLevel)
     }
 
 }
@@ -283,7 +295,7 @@ private struct MonthlyHeatmapLegend: View {
             Text("少ない")
             ForEach(0..<5, id: \.self) { level in
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(legendColor(for: level))
+                    .fill(MonthlyHeatmapPalette.color(for: level))
                     .frame(width: 12, height: 12)
             }
             Text("多い")
@@ -292,12 +304,5 @@ private struct MonthlyHeatmapLegend: View {
         .foregroundStyle(.secondary)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("移動距離の色。薄いほど少なく、濃いほど多い")
-    }
-
-    private func legendColor(for level: Int) -> Color {
-        guard level > 0 else {
-            return Color.secondary.opacity(0.12)
-        }
-        return Color.accentColor.opacity(0.22 + Double(level) * 0.195)
     }
 }
