@@ -95,11 +95,14 @@ private enum PreviewData {
         let today = calendar.startOfDay(for: .now)
         let meters: [Double] = [
             180, 280, 900, 610, 320, 470, 1_200,
-            120, 340, 1_250, 520, 260, 410, 1_800
+            120, 340, 1_250, 520, 260, 410, 1_800,
+            750, 430, 980, 210, 1_460, 680, 390,
+            1_050, 560, 270, 1_320, 840, 460, 1_600,
+            720, 1_100
         ]
 
         return meters.enumerated().compactMap { offset, meters in
-            guard let day = calendar.date(byAdding: .day, value: offset - 13, to: today) else {
+            guard let day = calendar.date(byAdding: .day, value: offset - 29, to: today) else {
                 return nil
             }
             return DailyDistance(
