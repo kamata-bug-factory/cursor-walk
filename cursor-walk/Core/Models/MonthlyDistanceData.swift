@@ -7,6 +7,9 @@ import Foundation
 
 /// 本日以外の日別移動距離と、色の強度を決める境界値。
 struct MonthlyDistanceHistory {
+    private static let minimumIntensityLevel = 1
+    private static let maximumIntensityLevel = 4
+
     private let pointsByDay: [Date: Double]
     private let sortedPositivePoints: [Double]
 
@@ -38,12 +41,16 @@ struct MonthlyDistanceHistory {
             return 0
         }
         guard !sortedPositivePoints.isEmpty else {
-            return 0
+            return Self.maximumIntensityLevel
         }
 
         let upperRank = (sortedPositivePoints.lastIndex { $0 <= points } ?? -1) + 1
         let percentile = Double(upperRank) / Double(sortedPositivePoints.count)
-        return min(4, Int(ceil(percentile * 4)))
+        let calculatedLevel = Int(ceil(percentile * Double(Self.maximumIntensityLevel)))
+        return max(
+            Self.minimumIntensityLevel,
+            min(Self.maximumIntensityLevel, calculatedLevel)
+        )
     }
 }
 
