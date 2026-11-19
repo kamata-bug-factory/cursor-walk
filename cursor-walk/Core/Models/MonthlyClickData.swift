@@ -127,4 +127,5 @@ struct MonthlyClickDay: Identifiable {
     let isInDisplayedMonth: Bool
 
     var id: Date { date }
+    var hasValue: Bool { clicks.total > 0 }
 }

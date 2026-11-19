@@ -118,4 +118,5 @@ struct MonthlyDistanceDay: Identifiable {
     let isInDisplayedMonth: Bool
 
     var id: Date { date }
+    var hasValue: Bool { points > 0 }
 }
