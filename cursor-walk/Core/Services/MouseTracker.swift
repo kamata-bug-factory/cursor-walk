@@ -54,7 +54,7 @@ final class MouseTracker: ObservableObject {
 
     /// アプリ内外のマウス移動を監視する。
     func startTracking() {
-        // 他のアプリ上でのマウス移動も監視する（アクセシビリティ権限が必要）。
+        // 他のアプリ上でのマウス移動も監視する。
         globalMonitor = NSEvent.addGlobalMonitorForEvents(
             matching: [.mouseMoved, .leftMouseDragged, .rightMouseDragged]
         ) { [weak self] _ in
