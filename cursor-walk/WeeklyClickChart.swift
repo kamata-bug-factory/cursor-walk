@@ -27,49 +27,6 @@ struct WeeklyClickChart: View {
         }
     }
 
-    private var chartMarks: [ClickChartMark] {
-        comparisonData.flatMap { comparison in
-            var marks = [
-                ClickChartMark(
-                    day: comparison.day,
-                    series: .previous,
-                    button: .previous,
-                    count: comparison.previousTotal
-                ),
-                ClickChartMark(
-                    day: comparison.day,
-                    series: .current,
-                    button: .left,
-                    count: comparison.current.left
-                ),
-                ClickChartMark(
-                    day: comparison.day,
-                    series: .current,
-                    button: .right,
-                    count: comparison.current.right
-                ),
-                ClickChartMark(
-                    day: comparison.day,
-                    series: .current,
-                    button: .middle,
-                    count: comparison.current.middle
-                )
-            ]
-
-            if comparison.current.other > 0 {
-                marks.append(
-                    ClickChartMark(
-                        day: comparison.day,
-                        series: .current,
-                        button: .other,
-                        count: comparison.current.other
-                    )
-                )
-            }
-            return marks
-        }
-    }
-
     private var axisConfiguration: ClickAxisConfiguration {
         let maximumValue = comparisonData
             .flatMap { [$0.current.total, $0.previousTotal] }
@@ -88,14 +45,28 @@ struct WeeklyClickChart: View {
                 total: totalClicks.total
             )
 
-            Chart(chartMarks) { mark in
-                BarMark(
-                    x: .value("日付", mark.day, unit: .day),
-                    y: .value("クリック回数", mark.count)
-                )
-                .position(by: .value("週", mark.series.rawValue))
-                .foregroundStyle(mark.button.color)
-                .cornerRadius(mark.button == .previous ? 4 : 2)
+            Chart {
+                ForEach(comparisonData) { comparison in
+                    RectangleMark(
+                        x: .value("日付", comparison.day, unit: .day),
+                        yStart: .value("先週の開始位置", 0),
+                        yEnd: .value("先週のクリック回数", comparison.previousTotal),
+                        width: .fixed(28)
+                    )
+                    .foregroundStyle(ClickButtonSeries.previous.color)
+                    .cornerRadius(4)
+                }
+
+                ForEach(comparisonData) { comparison in
+                    BarMark(
+                        x: .value("日付", comparison.day, unit: .day),
+                        yStart: .value("今週の開始位置", 0),
+                        yEnd: .value("今週のクリック回数", comparison.current.total),
+                        width: .fixed(22)
+                    )
+                    .foregroundStyle(comparison.currentBarStyle)
+                    .cornerRadius(4)
+                }
             }
             .chartOverlay { proxy in
                 GeometryReader { geometry in
@@ -284,22 +255,39 @@ private struct DailyClickComparison: Identifiable {
     let previousTotal: Int
 
     var id: Date { day }
-}
 
-private struct ClickChartMark: Identifiable {
-    let day: Date
-    let series: ClickWeekSeries
-    let button: ClickButtonSeries
-    let count: Int
+    var currentBarStyle: LinearGradient {
+        let segments: [(count: Int, color: Color)] = [
+            (current.left, ClickButtonSeries.left.color),
+            (current.right, ClickButtonSeries.right.color),
+            (current.middle, ClickButtonSeries.middle.color),
+            (current.other, ClickButtonSeries.other.color)
+        ]
+        let total = max(current.total, 1)
+        var accumulatedCount = 0
+        var stops: [Gradient.Stop] = []
 
-    var id: String {
-        "\(day.timeIntervalSinceReferenceDate)-\(series.rawValue)-\(button.rawValue)"
+        for segment in segments where segment.count > 0 {
+            let start = Double(accumulatedCount) / Double(total)
+            accumulatedCount += segment.count
+            let end = Double(accumulatedCount) / Double(total)
+            stops.append(Gradient.Stop(color: segment.color, location: start))
+            stops.append(Gradient.Stop(color: segment.color, location: end))
+        }
+
+        if stops.isEmpty {
+            stops = [
+                Gradient.Stop(color: ClickButtonSeries.left.color, location: 0),
+                Gradient.Stop(color: ClickButtonSeries.left.color, location: 1)
+            ]
+        }
+
+        return LinearGradient(
+            stops: stops,
+            startPoint: .bottom,
+            endPoint: .top
+        )
     }
-}
-
-private enum ClickWeekSeries: String {
-    case current = "今週"
-    case previous = "先週"
 }
 
 private enum ClickButtonSeries: String, Identifiable {
