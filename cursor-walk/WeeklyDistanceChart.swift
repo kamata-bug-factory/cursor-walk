@@ -61,9 +61,7 @@ struct WeeklyDistanceChart: View {
                     yEnd: .value("今週の移動距離", distance.currentPoints * distanceUnit.scale),
                     width: .fixed(22)
                 )
-                .foregroundStyle(
-                    Calendar.current.isDateInToday(distance.day) ? Color.accentColor : Color.secondary
-                )
+                .foregroundStyle(Color.accentColor)
                 .cornerRadius(4)
             }
             .chartOverlay { proxy in
