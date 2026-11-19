@@ -100,7 +100,7 @@ private struct DistanceTabs: View {
                 Label("月間", systemImage: "calendar")
             }
         }
-        .frame(height: 330)
+        .frame(height: AppLayout.tabHeight)
     }
 }
 
@@ -133,7 +133,7 @@ private struct ClickTabs: View {
                 Label("月間", systemImage: "calendar")
             }
         }
-        .frame(height: 330)
+        .frame(height: AppLayout.tabHeight)
     }
 }
 
@@ -157,12 +157,12 @@ private struct DistanceSummary: View {
                 .foregroundStyle(.secondary)
 
             Text(DistanceFormatter.formattedDistance(for: points))
-                .font(.system(size: 38, weight: .bold, design: .rounded))
+                .font(.system(size: AppLayout.primaryMetricFontSize, weight: .bold, design: .rounded))
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
 
             HStack(spacing: 8) {
-                if DistanceFormatter.meters(for: points) >= 1_000 {
+                if DistanceFormatter.meters(for: points) >= DistanceFormatter.metersPerKilometer {
                     Text(DistanceFormatter.formattedMeters(for: points))
                 }
 

@@ -5,6 +5,13 @@
 
 import Foundation
 
+/// AppKitが通知するマウスボタン番号。
+private enum MouseButtonNumber: Int {
+    case left = 0
+    case right = 1
+    case middle = 2
+}
+
 /// マウスボタンごとのクリック回数。
 struct ClickBreakdown: Codable, Equatable {
     var left = 0
@@ -17,14 +24,14 @@ struct ClickBreakdown: Codable, Equatable {
     }
 
     mutating func record(buttonNumber: Int) {
-        switch buttonNumber {
-        case 0:
+        switch MouseButtonNumber(rawValue: buttonNumber) {
+        case .left:
             left += 1
-        case 1:
+        case .right:
             right += 1
-        case 2:
+        case .middle:
             middle += 1
-        default:
+        case nil:
             other += 1
         }
     }

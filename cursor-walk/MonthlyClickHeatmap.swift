@@ -7,8 +7,6 @@ import SwiftUI
 
 /// 1か月の日別クリック回数をカレンダー形式の濃淡で表示する。
 struct MonthlyClickHeatmap: View {
-    private static let retainedMonthOffset = -12
-
     let dailyClicks: [DailyClickCount]
     let currentDayClicks: ClickBreakdown
     @State private var displayedMonth: Date
@@ -77,7 +75,7 @@ struct MonthlyClickHeatmap: View {
     private var earliestMonth: Date {
         Calendar.current.date(
             byAdding: .month,
-            value: Self.retainedMonthOffset,
+            value: MonthlyHeatmapStyle.retainedMonthOffset,
             to: currentMonth
         ) ?? currentMonth
     }
@@ -96,8 +94,6 @@ struct MonthlyClickHeatmap: View {
 }
 
 private struct MonthlyClickHeader: View {
-    private static let valueColumnWidth: CGFloat = 120
-
     let month: Date
     let total: Int
     let canMoveBackward: Bool
@@ -123,7 +119,7 @@ private struct MonthlyClickHeader: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
             }
-            .frame(width: Self.valueColumnWidth, alignment: .center)
+            .frame(width: MonthlyHeatmapStyle.valueColumnWidth, alignment: .center)
 
             MonthNavigationButton(
                 systemImage: "chevron.right",
@@ -137,8 +133,6 @@ private struct MonthlyClickHeader: View {
 }
 
 private struct MonthNavigationButton: View {
-    private static let length: CGFloat = 28
-
     let systemImage: String
     let accessibilityLabel: LocalizedStringResource
     let isEnabled: Bool
@@ -147,38 +141,21 @@ private struct MonthNavigationButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .frame(width: Self.length, height: Self.length)
+                .frame(
+                    width: MonthlyHeatmapStyle.navigationButtonLength,
+                    height: MonthlyHeatmapStyle.navigationButtonLength
+                )
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
         .opacity(isEnabled ? 1 : 0)
-        .frame(width: Self.length, height: Self.length)
+        .frame(
+            width: MonthlyHeatmapStyle.navigationButtonLength,
+            height: MonthlyHeatmapStyle.navigationButtonLength
+        )
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHidden(!isEnabled)
-    }
-}
-
-private enum MonthlyClickLayout {
-    static let cellLength: CGFloat = 26
-    static let cellSpacing: CGFloat = 5
-    static let calendarWidth = cellLength * 7 + cellSpacing * 6
-    static let calendarHeight: CGFloat = 201
-}
-
-private enum MonthlyClickPalette {
-    private static let emptyOpacity = 0.12
-    private static let minimumIntensityOpacity = 0.06
-    private static let intensityOpacityStep = 0.235
-
-    static func color(for intensityLevel: Int) -> Color {
-        guard intensityLevel > 0 else {
-            return Color.secondary.opacity(emptyOpacity)
-        }
-
-        return Color.accentColor.opacity(
-            minimumIntensityOpacity + Double(intensityLevel) * intensityOpacityStep
-        )
     }
 }
 
@@ -190,7 +167,7 @@ private struct MonthlyClickContent: View {
             MonthlyClickCalendar(days: days)
             MonthlyClickLegend()
         }
-        .frame(width: MonthlyClickLayout.calendarWidth)
+        .frame(width: MonthlyHeatmapStyle.calendarWidth)
         .frame(maxWidth: .infinity, alignment: .center)
     }
 }
@@ -198,10 +175,10 @@ private struct MonthlyClickContent: View {
 private struct MonthlyClickCalendar: View {
     private static let columns = Array(
         repeating: GridItem(
-            .fixed(MonthlyClickLayout.cellLength),
-            spacing: MonthlyClickLayout.cellSpacing
+            .fixed(MonthlyHeatmapStyle.cellLength),
+            spacing: MonthlyHeatmapStyle.cellSpacing
         ),
-        count: 7
+        count: MonthlyHeatmapStyle.weekdayCount
     )
     private static let weekdaySymbols: [String] = {
         var calendar = Calendar.current
@@ -213,23 +190,23 @@ private struct MonthlyClickCalendar: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            LazyVGrid(columns: Self.columns, spacing: MonthlyClickLayout.cellSpacing) {
+            LazyVGrid(columns: Self.columns, spacing: MonthlyHeatmapStyle.cellSpacing) {
                 ForEach(Self.weekdaySymbols, id: \.self) { weekday in
                     Text(weekday)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
-                        .frame(width: MonthlyClickLayout.cellLength)
+                        .frame(width: MonthlyHeatmapStyle.cellLength)
                 }
             }
 
-            LazyVGrid(columns: Self.columns, spacing: MonthlyClickLayout.cellSpacing) {
+            LazyVGrid(columns: Self.columns, spacing: MonthlyHeatmapStyle.cellSpacing) {
                 ForEach(days) { day in
                     MonthlyClickDayCell(day: day)
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .center)
-        .frame(height: MonthlyClickLayout.calendarHeight, alignment: .center)
+        .frame(height: MonthlyHeatmapStyle.calendarHeight, alignment: .center)
     }
 }
 
@@ -241,7 +218,7 @@ private struct MonthlyClickDayCell: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 3)
-                .fill(MonthlyClickPalette.color(for: day.intensityLevel))
+                .fill(MonthlyHeatmapStyle.color(for: day.intensityLevel))
 
             if day.isInDisplayedMonth {
                 Text(day.date, format: .dateTime.day())
@@ -249,7 +226,7 @@ private struct MonthlyClickDayCell: View {
                     .foregroundStyle(day.clicks.total > 0 ? .white : .secondary)
             }
         }
-        .frame(width: MonthlyClickLayout.cellLength, height: MonthlyClickLayout.cellLength)
+        .frame(width: MonthlyHeatmapStyle.cellLength, height: MonthlyHeatmapStyle.cellLength)
         .opacity(day.isInDisplayedMonth ? 1 : 0)
         .contentShape(Rectangle())
         .onContinuousHover { phase in
@@ -269,7 +246,7 @@ private struct MonthlyClickDayCell: View {
                     } action: { height in
                         tooltipHeight = height
                     }
-                    .offset(y: -(tooltipHeight + MonthlyClickLayout.cellSpacing))
+                    .offset(y: -(tooltipHeight + MonthlyHeatmapStyle.cellSpacing))
             }
         }
         .zIndex(isHovered ? 1 : 0)
@@ -306,9 +283,9 @@ private struct MonthlyClickLegend: View {
         HStack(spacing: 5) {
             Spacer()
             Text("少ない")
-            ForEach(0..<5, id: \.self) { level in
+            ForEach(0..<MonthlyHeatmapStyle.legendLevelCount, id: \.self) { level in
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(MonthlyClickPalette.color(for: level))
+                    .fill(MonthlyHeatmapStyle.color(for: level))
                     .frame(width: 12, height: 12)
             }
             Text("多い")

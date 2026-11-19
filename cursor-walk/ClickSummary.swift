@@ -23,7 +23,7 @@ struct ClickSummary: View {
                 .foregroundStyle(.secondary)
 
             Text(ClickFormatter.countWithUnit(clicks.total))
-                .font(.system(size: 38, weight: .bold, design: .rounded))
+                .font(.system(size: AppLayout.primaryMetricFontSize, weight: .bold, design: .rounded))
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
 

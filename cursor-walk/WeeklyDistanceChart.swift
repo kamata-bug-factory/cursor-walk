@@ -25,7 +25,9 @@ struct WeeklyDistanceChart: View {
 
     private var distanceUnit: DistanceUnit {
         let maximumPoints = (currentWeek + previousWeek).map(\.points).max() ?? 0
-        return DistanceFormatter.meters(for: maximumPoints) >= 1_000 ? .kilometers : .meters
+        return DistanceFormatter.meters(for: maximumPoints) >= DistanceFormatter.metersPerKilometer
+            ? .kilometers
+            : .meters
     }
 
     private var axisConfiguration: DistanceAxisConfiguration {
@@ -223,6 +225,8 @@ private struct DistanceTooltip: View {
 
 /// データの最大値から、読みやすいY軸の上限と目盛りを求める。
 private struct DistanceAxisConfiguration {
+    private static let targetIntervalCount = 5.0
+
     let upperBound: Double
     let values: [Double]
 
@@ -233,8 +237,7 @@ private struct DistanceAxisConfiguration {
             return
         }
 
-        let targetIntervalCount = 5.0
-        let step = Self.niceStep(for: maximumValue / targetIntervalCount)
+        let step = Self.niceStep(for: maximumValue / Self.targetIntervalCount)
         let intervalCount = max(1, Int(ceil(maximumValue / step)))
 
         upperBound = Double(intervalCount) * step
@@ -274,7 +277,7 @@ private enum DistanceUnit {
         case .meters:
             DistanceFormatter.metersPerPoint
         case .kilometers:
-            DistanceFormatter.metersPerPoint / 1_000
+            DistanceFormatter.metersPerPoint / DistanceFormatter.metersPerKilometer
         }
     }
 

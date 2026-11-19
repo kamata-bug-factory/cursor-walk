@@ -7,8 +7,6 @@ import SwiftUI
 
 /// 1か月の日別移動距離をカレンダー形式の濃淡で表示する。
 struct MonthlyDistanceHeatmap: View {
-    private static let retainedMonthOffset = -12
-
     let dailyDistances: [DailyDistance]
     let currentDayPoints: Double
     @State private var displayedMonth: Date
@@ -74,7 +72,7 @@ struct MonthlyDistanceHeatmap: View {
     private var earliestMonth: Date {
         Calendar.current.date(
             byAdding: .month,
-            value: Self.retainedMonthOffset,
+            value: MonthlyHeatmapStyle.retainedMonthOffset,
             to: currentMonth
         ) ?? currentMonth
     }
@@ -89,9 +87,6 @@ struct MonthlyDistanceHeatmap: View {
 }
 
 private struct MonthlyHeatmapHeader: View {
-    private static let valueColumnWidth: CGFloat = 120
-    private static let navigationButtonLength: CGFloat = 28
-
     let month: Date
     let totalPoints: Double
     let canMoveBackward: Bool
@@ -104,8 +99,8 @@ private struct MonthlyHeatmapHeader: View {
             Button(action: moveBackward) {
                 Image(systemName: "chevron.left")
                     .frame(
-                        width: Self.navigationButtonLength,
-                        height: Self.navigationButtonLength
+                        width: MonthlyHeatmapStyle.navigationButtonLength,
+                        height: MonthlyHeatmapStyle.navigationButtonLength
                     )
                     .contentShape(Rectangle())
             }
@@ -113,8 +108,8 @@ private struct MonthlyHeatmapHeader: View {
             .disabled(!canMoveBackward)
             .opacity(canMoveBackward ? 1 : 0)
             .frame(
-                width: Self.navigationButtonLength,
-                height: Self.navigationButtonLength
+                width: MonthlyHeatmapStyle.navigationButtonLength,
+                height: MonthlyHeatmapStyle.navigationButtonLength
             )
             .accessibilityLabel("前の月")
             .accessibilityHidden(!canMoveBackward)
@@ -128,13 +123,13 @@ private struct MonthlyHeatmapHeader: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
             }
-            .frame(width: Self.valueColumnWidth, alignment: .center)
+            .frame(width: MonthlyHeatmapStyle.valueColumnWidth, alignment: .center)
 
             Button(action: moveForward) {
                 Image(systemName: "chevron.right")
                     .frame(
-                        width: Self.navigationButtonLength,
-                        height: Self.navigationButtonLength
+                        width: MonthlyHeatmapStyle.navigationButtonLength,
+                        height: MonthlyHeatmapStyle.navigationButtonLength
                     )
                     .contentShape(Rectangle())
             }
@@ -142,37 +137,13 @@ private struct MonthlyHeatmapHeader: View {
             .disabled(!canMoveForward)
             .opacity(canMoveForward ? 1 : 0)
             .frame(
-                width: Self.navigationButtonLength,
-                height: Self.navigationButtonLength
+                width: MonthlyHeatmapStyle.navigationButtonLength,
+                height: MonthlyHeatmapStyle.navigationButtonLength
             )
             .accessibilityLabel("次の月")
             .accessibilityHidden(!canMoveForward)
         }
         .frame(maxWidth: .infinity, alignment: .center)
-    }
-}
-
-private enum MonthlyHeatmapLayout {
-    static let cellLength: CGFloat = 26
-    static let cellSpacing: CGFloat = 5
-    static let calendarWidth = cellLength * 7 + cellSpacing * 6
-    static let calendarHeight: CGFloat = 201
-    static let tooltipVerticalOffset = -(cellLength + cellSpacing)
-}
-
-private enum MonthlyHeatmapPalette {
-    private static let emptyOpacity = 0.12
-    private static let minimumIntensityOpacity = 0.06
-    private static let intensityOpacityStep = 0.235
-
-    static func color(for intensityLevel: Int) -> Color {
-        guard intensityLevel > 0 else {
-            return Color.secondary.opacity(emptyOpacity)
-        }
-
-        return Color.accentColor.opacity(
-            minimumIntensityOpacity + Double(intensityLevel) * intensityOpacityStep
-        )
     }
 }
 
@@ -184,7 +155,7 @@ private struct MonthlyHeatmapContent: View {
             MonthlyHeatmapCalendar(days: days)
             MonthlyHeatmapLegend()
         }
-        .frame(width: MonthlyHeatmapLayout.calendarWidth)
+        .frame(width: MonthlyHeatmapStyle.calendarWidth)
         .frame(maxWidth: .infinity, alignment: .center)
     }
 }
@@ -192,10 +163,10 @@ private struct MonthlyHeatmapContent: View {
 private struct MonthlyHeatmapCalendar: View {
     private static let columns = Array(
         repeating: GridItem(
-            .fixed(MonthlyHeatmapLayout.cellLength),
-            spacing: MonthlyHeatmapLayout.cellSpacing
+            .fixed(MonthlyHeatmapStyle.cellLength),
+            spacing: MonthlyHeatmapStyle.cellSpacing
         ),
-        count: 7
+        count: MonthlyHeatmapStyle.weekdayCount
     )
     private static let weekdaySymbols: [String] = {
         var calendar = Calendar.current
@@ -206,16 +177,16 @@ private struct MonthlyHeatmapCalendar: View {
     let days: [MonthlyDistanceDay]
     var body: some View {
         VStack(spacing: 6) {
-            LazyVGrid(columns: Self.columns, spacing: MonthlyHeatmapLayout.cellSpacing) {
+            LazyVGrid(columns: Self.columns, spacing: MonthlyHeatmapStyle.cellSpacing) {
                 ForEach(Self.weekdaySymbols, id: \.self) { weekday in
                     Text(weekday)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
-                        .frame(width: MonthlyHeatmapLayout.cellLength)
+                        .frame(width: MonthlyHeatmapStyle.cellLength)
                 }
             }
 
-            LazyVGrid(columns: Self.columns, spacing: MonthlyHeatmapLayout.cellSpacing) {
+            LazyVGrid(columns: Self.columns, spacing: MonthlyHeatmapStyle.cellSpacing) {
                 ForEach(days) { day in
                     MonthlyHeatmapDayCell(
                         day: day
@@ -224,7 +195,7 @@ private struct MonthlyHeatmapCalendar: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .center)
-        .frame(height: MonthlyHeatmapLayout.calendarHeight, alignment: .center)
+        .frame(height: MonthlyHeatmapStyle.calendarHeight, alignment: .center)
     }
 }
 
@@ -244,8 +215,8 @@ private struct MonthlyHeatmapDayCell: View {
             }
         }
         .frame(
-            width: MonthlyHeatmapLayout.cellLength,
-            height: MonthlyHeatmapLayout.cellLength
+            width: MonthlyHeatmapStyle.cellLength,
+            height: MonthlyHeatmapStyle.cellLength
         )
         .opacity(day.isInDisplayedMonth ? 1 : 0)
         .contentShape(Rectangle())
@@ -261,7 +232,7 @@ private struct MonthlyHeatmapDayCell: View {
             if isHovered {
                 MonthlyHeatmapTooltip(day: day)
                     .fixedSize()
-                    .offset(y: MonthlyHeatmapLayout.tooltipVerticalOffset)
+                    .offset(y: -(MonthlyHeatmapStyle.cellLength + MonthlyHeatmapStyle.cellSpacing))
             }
         }
         .zIndex(isHovered ? 1 : 0)
@@ -273,7 +244,7 @@ private struct MonthlyHeatmapDayCell: View {
     }
 
     private var fillColor: Color {
-        MonthlyHeatmapPalette.color(for: day.intensityLevel)
+        MonthlyHeatmapStyle.color(for: day.intensityLevel)
     }
 
 }
@@ -293,9 +264,9 @@ private struct MonthlyHeatmapLegend: View {
         HStack(spacing: 5) {
             Spacer()
             Text("少ない")
-            ForEach(0..<5, id: \.self) { level in
+            ForEach(0..<MonthlyHeatmapStyle.legendLevelCount, id: \.self) { level in
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(MonthlyHeatmapPalette.color(for: level))
+                    .fill(MonthlyHeatmapStyle.color(for: level))
                     .frame(width: 12, height: 12)
             }
             Text("多い")

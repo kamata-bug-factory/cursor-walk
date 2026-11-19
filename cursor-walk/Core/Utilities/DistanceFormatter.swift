@@ -9,6 +9,8 @@ import Foundation
 enum DistanceFormatter {
     /// 1ポイントあたりの距離（メートル）。
     static let metersPerPoint = 0.0254 / 72.0
+    static let metersPerKilometer = 1_000.0
+    private static let centimetersPerMeter = 100.0
 
     /// ポイント単位の距離をメートルへ換算する。
     ///
@@ -25,15 +27,15 @@ enum DistanceFormatter {
     static func formattedDistance(for points: Double) -> String {
         let meters = meters(for: points)
 
-        if meters >= 1_000 {
-            return "\((meters / 1_000).formatted(.number.precision(.fractionLength(2)))) km"
+        if meters >= metersPerKilometer {
+            return "\((meters / metersPerKilometer).formatted(.number.precision(.fractionLength(2)))) km"
         }
 
         if meters >= 1 {
             return "\(meters.formatted(.number.precision(.fractionLength(2)))) m"
         }
 
-        return "\((meters * 100).formatted(.number.precision(.fractionLength(0)))) cm"
+        return "\((meters * centimetersPerMeter).formatted(.number.precision(.fractionLength(0)))) cm"
     }
 
     /// ポイント単位の距離を、小数第2位までのメートル表記へ変換する。

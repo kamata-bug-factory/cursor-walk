@@ -10,6 +10,8 @@ import Foundation
 /// マウスの移動距離を計測・管理する。
 final class MouseTracker: ObservableObject {
     private static let retentionDays = 400
+    private static let maximumTrackableDistance: CGFloat = 500
+    private static let saveDelay: TimeInterval = 1
 
     /// 今日の累計移動ポイント数
     @Published private(set) var totalPoints: Double = 0.0
@@ -112,7 +114,7 @@ final class MouseTracker: ObservableObject {
         self.lastLocation = currentLocation
 
         // 画面間の瞬間移動やスリープ復帰時の異常値は無視する。
-        guard distance < 500 else {
+        guard distance < Self.maximumTrackableDistance else {
             return
         }
 
@@ -231,7 +233,7 @@ final class MouseTracker: ObservableObject {
             self?.saveDailyDistances()
         }
         pendingSaveWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1, execute: workItem)
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.saveDelay, execute: workItem)
     }
 
     /// 日別距離JSONの保存先を作成して返す。
