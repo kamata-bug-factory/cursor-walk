@@ -15,6 +15,24 @@ struct ContentView: View {
     private var selectedMetric = MeasurementMetric.distance
 
     var body: some View {
+        ContentViewContent(
+            mouseTracker: mouseTracker,
+            clickTracker: clickTracker,
+            selectedMetric: $selectedMetric,
+            isMetricSelectionEnabled: true,
+            onClose: onClose
+        )
+    }
+}
+
+private struct ContentViewContent: View {
+    let mouseTracker: MouseTracker
+    let clickTracker: MouseClickTracker
+    @Binding var selectedMetric: MeasurementMetric
+    let isMetricSelectionEnabled: Bool
+    let onClose: () -> Void
+
+    var body: some View {
         VStack(spacing: 12) {
             if selectedMetric == .distance {
                 DistanceTabs(mouseTracker: mouseTracker)
@@ -24,6 +42,7 @@ struct ContentView: View {
 
             ContentFooter(
                 selectedMetric: $selectedMetric,
+                isMetricSelectionEnabled: isMetricSelectionEnabled,
                 onClose: onClose
             )
         }
@@ -34,6 +53,7 @@ struct ContentView: View {
 
 private struct ContentFooter: View {
     @Binding var selectedMetric: MeasurementMetric
+    let isMetricSelectionEnabled: Bool
     let onClose: () -> Void
 
     var body: some View {
@@ -46,6 +66,7 @@ private struct ContentFooter: View {
             }
             .pickerStyle(.menu)
             .labelsHidden()
+            .disabled(!isMetricSelectionEnabled)
             .accessibilityLabel("表示する指標")
 
             Spacer()
@@ -220,18 +241,64 @@ private enum PreviewData {
     }
 }
 
-#Preview("記録あり") {
-    ContentView(
-        mouseTracker: MouseTracker(previewDistances: PreviewData.dailyDistances),
-        clickTracker: MouseClickTracker(previewClicks: PreviewData.dailyClicks),
-        onClose: {}
+private struct ContentViewPreview: View {
+    @StateObject private var mouseTracker: MouseTracker
+    @StateObject private var clickTracker: MouseClickTracker
+    private let selectedMetric: MeasurementMetric
+
+    init(
+        selectedMetric: MeasurementMetric,
+        dailyDistances: [DailyDistance],
+        dailyClicks: [DailyClickCount]
+    ) {
+        self.selectedMetric = selectedMetric
+        _mouseTracker = StateObject(
+            wrappedValue: MouseTracker(previewDistances: dailyDistances)
+        )
+        _clickTracker = StateObject(
+            wrappedValue: MouseClickTracker(previewClicks: dailyClicks)
+        )
+    }
+
+    var body: some View {
+        ContentViewContent(
+            mouseTracker: mouseTracker,
+            clickTracker: clickTracker,
+            selectedMetric: .constant(selectedMetric),
+            isMetricSelectionEnabled: false,
+            onClose: {}
+        )
+    }
+}
+
+#Preview("移動距離・記録あり") {
+    ContentViewPreview(
+        selectedMetric: .distance,
+        dailyDistances: PreviewData.dailyDistances,
+        dailyClicks: PreviewData.dailyClicks
     )
 }
 
-#Preview("記録なし") {
-    ContentView(
-        mouseTracker: MouseTracker(previewDistances: []),
-        clickTracker: MouseClickTracker(previewClicks: []),
-        onClose: {}
+#Preview("クリック回数・記録あり") {
+    ContentViewPreview(
+        selectedMetric: .clicks,
+        dailyDistances: PreviewData.dailyDistances,
+        dailyClicks: PreviewData.dailyClicks
+    )
+}
+
+#Preview("移動距離・記録なし") {
+    ContentViewPreview(
+        selectedMetric: .distance,
+        dailyDistances: [],
+        dailyClicks: []
+    )
+}
+
+#Preview("クリック回数・記録なし") {
+    ContentViewPreview(
+        selectedMetric: .clicks,
+        dailyDistances: [],
+        dailyClicks: []
     )
 }
