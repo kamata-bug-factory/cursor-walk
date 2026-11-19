@@ -1,12 +1,12 @@
 //
-//  DistanceTooltipStyle.swift
+//  TooltipStyle.swift
 //  cursor-walk
 //
 
 import SwiftUI
 
-/// 移動距離ツールチップで共通する外観と操作特性。
-private struct DistanceTooltipModifier: ViewModifier {
+/// グラフとヒートマップのツールチップで共通する外観と操作特性。
+private struct TooltipModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .padding(.horizontal, 8)
@@ -17,7 +17,7 @@ private struct DistanceTooltipModifier: ViewModifier {
 }
 
 extension View {
-    func distanceTooltipStyle() -> some View {
-        modifier(DistanceTooltipModifier())
+    func tooltipStyle() -> some View {
+        modifier(TooltipModifier())
     }
 }

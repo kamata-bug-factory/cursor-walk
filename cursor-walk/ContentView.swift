@@ -5,47 +5,135 @@
 
 import SwiftUI
 
-/// 移動距離を確認するメイン画面。
+/// 計測指標を切り替えて履歴を確認するメイン画面。
 struct ContentView: View {
-    @ObservedObject var mouseTracker: MouseTracker
+    let mouseTracker: MouseTracker
+    let clickTracker: MouseClickTracker
     let onClose: () -> Void
+
+    @AppStorage("selectedMeasurementMetric")
+    private var selectedMetric = MeasurementMetric.distance
+
+    var body: some View {
+        VStack(spacing: 12) {
+            if selectedMetric == .distance {
+                DistanceTabs(mouseTracker: mouseTracker)
+            } else {
+                ClickTabs(clickTracker: clickTracker)
+            }
+
+            ContentFooter(
+                selectedMetric: $selectedMetric,
+                onClose: onClose
+            )
+        }
+        .frame(width: 460)
+        .padding()
+    }
+}
+
+private struct ContentFooter: View {
+    @Binding var selectedMetric: MeasurementMetric
+    let onClose: () -> Void
+
+    var body: some View {
+        HStack {
+            Picker("指標", selection: $selectedMetric) {
+                ForEach(MeasurementMetric.allCases) { metric in
+                    Text(metric.title)
+                        .tag(metric)
+                }
+            }
+            .pickerStyle(.menu)
+            .labelsHidden()
+            .accessibilityLabel("表示する指標")
+
+            Spacer()
+
+            Button("閉じる", action: onClose)
+        }
+    }
+}
+
+private enum MeasurementMetric: String, CaseIterable, Identifiable {
+    case distance
+    case clicks
+
+    var id: String { rawValue }
+
+    var title: LocalizedStringResource {
+        switch self {
+        case .distance:
+            "移動距離"
+        case .clicks:
+            "クリック回数"
+        }
+    }
+}
+
+private struct DistanceTabs: View {
+    @ObservedObject var mouseTracker: MouseTracker
 
     var body: some View {
         let weeklyDistanceData = WeeklyDistanceData(pointsForDate: mouseTracker.points(for:))
 
-        VStack(spacing: 12) {
-            TabView {
-                DistanceSummary(date: .now, points: mouseTracker.totalPoints)
-                    .tabItem {
-                        Label("本日", systemImage: "cursorarrow.motionlines")
-                    }
+        TabView {
+            DistanceSummary(date: .now, points: mouseTracker.totalPoints)
+                .tabItem {
+                    Label("本日", systemImage: "cursorarrow.motionlines")
+                }
 
-                WeeklyDistanceChart(
-                    currentWeek: weeklyDistanceData.currentWeek,
-                    previousWeek: weeklyDistanceData.previousWeek,
-                    totalPoints: weeklyDistanceData.totalPoints
-                )
-                    .tabItem {
-                        Label("週間", systemImage: "chart.bar")
-                    }
-
-                MonthlyDistanceHeatmap(
-                    dailyDistances: mouseTracker.dailyDistances,
-                    currentDayPoints: mouseTracker.totalPoints
-                )
-                    .tabItem {
-                        Label("月間", systemImage: "calendar")
-                    }
+            WeeklyDistanceChart(
+                currentWeek: weeklyDistanceData.currentWeek,
+                previousWeek: weeklyDistanceData.previousWeek,
+                totalPoints: weeklyDistanceData.totalPoints
+            )
+            .tabItem {
+                Label("週間", systemImage: "chart.bar")
             }
-            .frame(height: 330)
 
-            HStack {
-                Spacer()
-                Button("閉じる", action: onClose)
+            MonthlyDistanceHeatmap(
+                dailyDistances: mouseTracker.dailyDistances,
+                currentDayPoints: mouseTracker.totalPoints
+            )
+            .tabItem {
+                Label("月間", systemImage: "calendar")
             }
         }
-        .frame(width: 460)
-        .padding()
+        .frame(height: 330)
+    }
+}
+
+private struct ClickTabs: View {
+    @ObservedObject var clickTracker: MouseClickTracker
+
+    var body: some View {
+        let weeklyClickData = WeeklyClickData(clicksForDate: clickTracker.clicks(for:))
+
+        TabView {
+            ClickSummary(date: .now, clicks: clickTracker.todayClicks)
+                .tabItem {
+                    Label("本日", systemImage: "computermouse")
+                }
+
+            WeeklyClickChart(
+                currentWeek: weeklyClickData.currentWeek,
+                previousWeek: weeklyClickData.previousWeek,
+                totalClicks: weeklyClickData.totalClicks
+            )
+            .tabItem {
+                Label("週間", systemImage: "chart.bar")
+            }
+
+            MonthlyClickHeatmap(
+                dailyClicks: clickTracker.dailyClicks,
+                currentDayClicks: clickTracker.todayClicks
+            )
+            .tabItem {
+                Label("月間", systemImage: "calendar")
+            }
+        }
+        .frame(height: 330)
     }
 }
 
@@ -87,8 +175,6 @@ private struct DistanceSummary: View {
     }
 }
 
-
-/// プレビューに表示するサンプル記録。
 private enum PreviewData {
     static var dailyDistances: [DailyDistance] {
         let calendar = Calendar.current
@@ -111,11 +197,33 @@ private enum PreviewData {
             )
         }
     }
+
+    static var dailyClicks: [DailyClickCount] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: .now)
+
+        return (0..<30).compactMap { offset in
+            guard let day = calendar.date(byAdding: .day, value: offset - 29, to: today) else {
+                return nil
+            }
+
+            return DailyClickCount(
+                day: day,
+                clicks: ClickBreakdown(
+                    left: 240 + offset * 13,
+                    right: 30 + offset * 2,
+                    middle: 8 + offset,
+                    other: offset.isMultiple(of: 7) ? 3 : 0
+                )
+            )
+        }
+    }
 }
 
 #Preview("記録あり") {
     ContentView(
         mouseTracker: MouseTracker(previewDistances: PreviewData.dailyDistances),
+        clickTracker: MouseClickTracker(previewClicks: PreviewData.dailyClicks),
         onClose: {}
     )
 }
@@ -123,6 +231,7 @@ private enum PreviewData {
 #Preview("記録なし") {
     ContentView(
         mouseTracker: MouseTracker(previewDistances: []),
+        clickTracker: MouseClickTracker(previewClicks: []),
         onClose: {}
     )
 }

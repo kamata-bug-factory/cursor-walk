@@ -209,7 +209,7 @@ private struct DistanceTooltip: View {
             Text(comparisonText)
                 .font(.caption2.weight(.semibold))
         }
-        .distanceTooltipStyle()
+        .tooltipStyle()
     }
 
     private var comparisonText: LocalizedStringResource {

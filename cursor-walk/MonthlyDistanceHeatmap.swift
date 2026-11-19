@@ -284,7 +284,7 @@ private struct MonthlyHeatmapTooltip: View {
     var body: some View {
         Text("\(DateDisplayFormatter.yearMonthDayWeekday(from: day.date)) \(DistanceFormatter.formattedDistance(for: day.points))")
             .font(.caption)
-            .distanceTooltipStyle()
+            .tooltipStyle()
     }
 }
 

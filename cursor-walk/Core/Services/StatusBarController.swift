@@ -6,6 +6,7 @@ import SwiftUI
 final class StatusBarController: NSObject, NSApplicationDelegate {
     private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
     private lazy var mouseTracker = MouseTracker()
+    private lazy var clickTracker = MouseClickTracker()
     private var statusItem: NSStatusItem?
     private let popover = NSPopover()
 
@@ -20,7 +21,10 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
 
         popover.behavior = .transient
         popover.contentViewController = NSHostingController(
-            rootView: ContentView(mouseTracker: mouseTracker) { [weak self] in
+            rootView: ContentView(
+                mouseTracker: mouseTracker,
+                clickTracker: clickTracker
+            ) { [weak self] in
                 self?.popover.performClose(nil)
             }
         )
@@ -88,7 +92,9 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard !isPreview else { return .terminateNow }
 
-        if mouseTracker.saveBeforeQuitting() {
+        let distanceSaved = mouseTracker.saveBeforeQuitting()
+        let clicksSaved = clickTracker.saveBeforeQuitting()
+        if distanceSaved && clicksSaved {
             return .terminateNow
         }
 
@@ -110,6 +116,7 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
         guard !isPreview else { return }
 
         mouseTracker.stopTracking()
+        clickTracker.stopTracking()
         if let statusItem {
             NSStatusBar.system.removeStatusItem(statusItem)
         }
