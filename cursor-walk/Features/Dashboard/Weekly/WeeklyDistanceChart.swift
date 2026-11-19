@@ -94,7 +94,7 @@ private struct DistanceTooltip: View {
     }
 
     private var comparisonText: LocalizedStringResource {
-        WeekComparisonFormatter.formatted(
+        WeeklyComparisonFormatter.formatted(
             current: distance.currentPoints,
             previous: distance.previousPoints,
             on: distance.day

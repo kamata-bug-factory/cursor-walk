@@ -100,7 +100,7 @@ private struct ClickChartTooltip: View {
     }
 
     private var comparisonText: LocalizedStringResource {
-        WeekComparisonFormatter.formatted(
+        WeeklyComparisonFormatter.formatted(
             current: comparison.current.total,
             previous: comparison.previousTotal,
             on: comparison.day
