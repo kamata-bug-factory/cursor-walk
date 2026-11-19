@@ -213,21 +213,11 @@ private struct DistanceTooltip: View {
     }
 
     private var comparisonText: LocalizedStringResource {
-        let isFuture = Calendar.current.compare(
-            distance.day,
-            to: .now,
-            toGranularity: .day
-        ) == .orderedDescending
-
-        guard distance.previousPoints > 0, !isFuture else {
-            return "先週比 -"
-        }
-
-        let percentage = Int(
-            ((distance.currentPoints - distance.previousPoints) / distance.previousPoints * 100)
-                .rounded()
+        WeekComparisonFormatter.formatted(
+            current: distance.currentPoints,
+            previous: distance.previousPoints,
+            on: distance.day
         )
-        return "先週比 \(percentage, format: .number.sign(strategy: .always()))%"
     }
 }
 

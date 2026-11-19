@@ -203,7 +203,7 @@ struct WeeklyClickChart: View {
 }
 
 private enum ClickTooltipLayout {
-    static let centerYOffset: CGFloat = 40
+    static let centerYOffset: CGFloat = 47
 }
 
 private struct WeeklyClickHeader: View {
@@ -263,8 +263,18 @@ private struct ClickChartTooltip: View {
                 .lineLimit(1)
             Text("先週 \(ClickFormatter.countWithUnit(comparison.previousTotal))")
                 .font(.caption2)
+            Text(comparisonText)
+                .font(.caption2.weight(.semibold))
         }
         .tooltipStyle()
+    }
+
+    private var comparisonText: LocalizedStringResource {
+        WeekComparisonFormatter.formatted(
+            current: comparison.current.total,
+            previous: comparison.previousTotal,
+            on: comparison.day
+        )
     }
 }
 
