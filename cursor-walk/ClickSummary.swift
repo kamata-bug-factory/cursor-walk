@@ -17,19 +17,12 @@ struct ClickSummary: View {
     let clicks: ClickBreakdown
 
     var body: some View {
-        VStack(spacing: 8) {
-            Text("\(date.formatted(Self.dateStyle))のクリック回数")
-                .font(.headline)
-                .foregroundStyle(.secondary)
-
-            Text(ClickFormatter.countWithUnit(clicks.total))
-                .font(.system(size: AppLayout.primaryMetricFontSize, weight: .bold, design: .rounded))
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-
+        TodaySummary(
+            title: "\(date.formatted(Self.dateStyle))のクリック回数",
+            primaryValue: ClickFormatter.countWithUnit(clicks.total)
+        ) {
             ClickBreakdownView(clicks: clicks)
         }
-        .frame(maxWidth: .infinity)
     }
 }
 

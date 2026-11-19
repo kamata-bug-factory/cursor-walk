@@ -158,44 +158,6 @@ private struct ClickTabs: View {
     }
 }
 
-/// 本日の移動距離を表示するビュー。
-private struct DistanceSummary: View {
-    private static let dateStyle = Date.FormatStyle()
-        .month(.defaultDigits)
-        .day()
-        .weekday(.abbreviated)
-        .locale(Locale(identifier: "ja_JP"))
-
-    let date: Date
-    let points: Double
-
-    var body: some View {
-        let formattedDate = date.formatted(Self.dateStyle)
-
-        VStack(spacing: 6) {
-            Text("\(formattedDate)の移動距離")
-                .font(.headline)
-                .foregroundStyle(.secondary)
-
-            Text(DistanceFormatter.formattedDistance(for: points))
-                .font(.system(size: AppLayout.primaryMetricFontSize, weight: .bold, design: .rounded))
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-
-            HStack(spacing: 8) {
-                if DistanceFormatter.meters(for: points) >= DistanceFormatter.metersPerKilometer {
-                    Text(DistanceFormatter.formattedMeters(for: points))
-                }
-
-                Text("\(Int(points)) pts")
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-    }
-}
-
 private enum PreviewData {
     static var dailyDistances: [DailyDistance] {
         let calendar = Calendar.current
