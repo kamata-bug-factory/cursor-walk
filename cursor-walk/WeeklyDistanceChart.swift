@@ -11,14 +11,15 @@ struct WeeklyDistanceChart: View {
     let currentWeek: [DailyDistance]
     let previousWeek: [DailyDistance]
     let totalPoints: Double
-    @State private var hoveredDistance: DailyDistanceComparison?
 
     private var comparisonData: [DailyDistanceComparison] {
         zip(currentWeek, previousWeek).map { current, previous in
             DailyDistanceComparison(
                 day: current.day,
                 currentPoints: current.points,
-                previousPoints: previous.points
+                previousPoints: previous.points,
+                currentValue: current.points * distanceUnit.scale,
+                previousValue: previous.points * distanceUnit.scale
             )
         }
     }
@@ -38,147 +39,24 @@ struct WeeklyDistanceChart: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            WeeklyChartHeader(
-                firstDay: currentWeek.first?.day,
-                lastDay: currentWeek.last?.day,
-                totalPoints: totalPoints
-            )
-
-            Chart(comparisonData) { distance in
-                BarMark(
-                    x: .value("日付", distance.day, unit: .day),
-                    yStart: .value("先週の開始位置", 0),
-                    yEnd: .value("先週の移動距離", distance.previousPoints * distanceUnit.scale),
-                    width: .fixed(28)
-                )
-                .foregroundStyle(Color.secondary.opacity(0.32))
-                .cornerRadius(4)
-
-                BarMark(
-                    x: .value("日付", distance.day, unit: .day),
-                    yStart: .value("今週の開始位置", 0),
-                    yEnd: .value("今週の移動距離", distance.currentPoints * distanceUnit.scale),
-                    width: .fixed(22)
-                )
-                .foregroundStyle(Color.accentColor)
-                .cornerRadius(4)
-            }
-            .chartOverlay { proxy in
-                GeometryReader { geometry in
-                    Rectangle()
-                        .fill(.clear)
-                        .contentShape(Rectangle())
-                        .onContinuousHover { phase in
-                            switch phase {
-                            case .active(let location):
-                                updateHoveredDistance(
-                                    at: location,
-                                    proxy: proxy,
-                                    geometry: geometry
-                                )
-                            case .ended:
-                                hoveredDistance = nil
-                            }
-                        }
-                }
-            }
-            .chartOverlay { proxy in
-                GeometryReader { geometry in
-                    if let hoveredDistance,
-                       let barCenter = Calendar.current.date(
-                        byAdding: .hour,
-                        value: 12,
-                        to: hoveredDistance.day
-                       ),
-                       let xPosition = proxy.position(forX: barCenter),
-                       let plotAreaFrame = proxy.plotFrame {
-                        let plotFrame = geometry[plotAreaFrame]
-
-                        DistanceTooltip(distance: hoveredDistance)
-                            .position(
-                                x: plotFrame.origin.x + xPosition,
-                                y: plotFrame.minY + 38
-                            )
-                    }
-                }
-            }
-            .chartXAxis {
-                AxisMarks(values: .stride(by: .day)) { value in
-                    AxisGridLine()
-                    AxisTick()
-
-                    if let date = value.as(Date.self) {
-                        AxisValueLabel {
-                            Text(DateDisplayFormatter.monthDayWeekday(from: date))
-                        }
-                    }
-                }
-            }
-            .chartYScale(domain: 0...axisConfiguration.upperBound)
-            .chartYAxis {
-                AxisMarks(values: axisConfiguration.values) {
-                    AxisGridLine()
-                    AxisValueLabel()
-                }
-            }
-            .chartYAxisLabel("移動距離（\(distanceUnit.symbol)）", position: .top, alignment: .leading)
-            .frame(height: 190)
+        WeeklyComparisonChart(
+            data: comparisonData,
+            day: \.day,
+            currentValue: \.currentValue,
+            previousValue: \.previousValue,
+            currentStyle: \.currentStyle,
+            previousStyle: AnyShapeStyle(Color.secondary.opacity(0.32)),
+            totalText: "合計 \(DistanceFormatter.formattedDistance(for: totalPoints))",
+            valueName: "移動距離",
+            yAxisLabel: "移動距離（\(distanceUnit.symbol)）",
+            yAxisUpperBound: axisConfiguration.upperBound,
+            yAxisValues: axisConfiguration.values,
+            tooltipCenterYOffset: 38
+        ) { distance in
+            DistanceTooltip(distance: distance)
+        } footer: {
+            EmptyView()
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    /// ポインタ位置に対応する日付を特定し、ツールチップの表示対象を更新する。
-    ///
-    /// - Parameters:
-    ///   - location: チャート上のポインタ位置。
-    ///   - proxy: 座標とデータ値を相互変換するチャートプロキシ。
-    ///   - geometry: チャートのプロット領域を取得するためのジオメトリプロキシ。
-    private func updateHoveredDistance(
-        at location: CGPoint,
-        proxy: ChartProxy,
-        geometry: GeometryProxy
-    ) {
-        guard
-            let plotAreaFrame = proxy.plotFrame,
-            geometry[plotAreaFrame].contains(location),
-            let date = proxy.value(
-                atX: location.x - geometry[plotAreaFrame].origin.x,
-                as: Date.self
-            )
-        else {
-            hoveredDistance = nil
-            return
-        }
-
-        let calendar = Calendar.current
-        hoveredDistance = comparisonData.first {
-            calendar.isDate($0.day, inSameDayAs: date)
-        }
-    }
-}
-
-private struct WeeklyChartHeader: View {
-    let firstDay: Date?
-    let lastDay: Date?
-    let totalPoints: Double
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(weekRangeText)
-                .font(.headline)
-            Text("合計 \(DistanceFormatter.formattedDistance(for: totalPoints))")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private var weekRangeText: String {
-        guard let firstDay, let lastDay else {
-            return "週間"
-        }
-
-        return "\(DateDisplayFormatter.monthDayWeekday(from: firstDay))〜\(DateDisplayFormatter.monthDayWeekday(from: lastDay))"
     }
 }
 
@@ -186,8 +64,11 @@ private struct DailyDistanceComparison: Identifiable {
     let day: Date
     let currentPoints: Double
     let previousPoints: Double
+    let currentValue: Double
+    let previousValue: Double
 
     var id: Date { day }
+    var currentStyle: AnyShapeStyle { AnyShapeStyle(Color.accentColor) }
 }
 
 /// 日別の移動距離と先週比を示すツールチップ。

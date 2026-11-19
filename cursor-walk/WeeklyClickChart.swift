@@ -8,14 +8,11 @@ import SwiftUI
 
 /// 今週のボタン別クリック回数を積み上げ、前週の合計と比較するグラフ。
 struct WeeklyClickChart: View {
-    private static let chartHeight: CGFloat = 190
     private static let targetAxisIntervalCount = 5.0
 
     let currentWeek: [DailyClickCount]
     let previousWeek: [DailyClickCount]
     let totalClicks: ClickBreakdown
-    @State private var hoveredClicks: DailyClickComparison?
-    @State private var tooltipWidth: CGFloat = 0
 
     private var comparisonData: [DailyClickComparison] {
         zip(currentWeek, previousWeek).map { current, previous in
@@ -38,167 +35,29 @@ struct WeeklyClickChart: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            WeeklyClickHeader(
-                firstDay: currentWeek.first?.day,
-                lastDay: currentWeek.last?.day,
-                total: totalClicks.total
-            )
-
-            Chart {
-                ForEach(comparisonData) { comparison in
-                    RectangleMark(
-                        x: .value("日付", comparison.day, unit: .day),
-                        yStart: .value("先週の開始位置", 0),
-                        yEnd: .value("先週のクリック回数", comparison.previousTotal),
-                        width: .fixed(28)
-                    )
-                    .foregroundStyle(ClickButtonSeries.previous.color)
-                    .cornerRadius(4)
-                }
-
-                ForEach(comparisonData) { comparison in
-                    BarMark(
-                        x: .value("日付", comparison.day, unit: .day),
-                        yStart: .value("今週の開始位置", 0),
-                        yEnd: .value("今週のクリック回数", comparison.current.total),
-                        width: .fixed(22)
-                    )
-                    .foregroundStyle(comparison.currentBarStyle)
-                    .cornerRadius(4)
-                }
-            }
-            .chartOverlay { proxy in
-                GeometryReader { geometry in
-                    Rectangle()
-                        .fill(.clear)
-                        .contentShape(Rectangle())
-                        .onContinuousHover { phase in
-                            switch phase {
-                            case .active(let location):
-                                updateHoveredClicks(
-                                    at: location,
-                                    proxy: proxy,
-                                    geometry: geometry
-                                )
-                            case .ended:
-                                hoveredClicks = nil
-                            }
-                        }
-                }
-            }
-            .chartOverlay { proxy in
-                GeometryReader { geometry in
-                    if let hoveredClicks,
-                       let barCenter = Calendar.current.date(
-                        byAdding: .hour,
-                        value: 12,
-                        to: hoveredClicks.day
-                       ),
-                       let xPosition = proxy.position(forX: barCenter),
-                       let plotAreaFrame = proxy.plotFrame {
-                        let plotFrame = geometry[plotAreaFrame]
-                        let rawXPosition = plotFrame.origin.x + xPosition
-                        let tooltipHalfWidth = min(
-                            tooltipWidth / 2,
-                            plotFrame.width / 2
-                        )
-                        let tooltipXPosition = min(
-                            max(rawXPosition, plotFrame.minX + tooltipHalfWidth),
-                            plotFrame.maxX - tooltipHalfWidth
-                        )
-
-                        ClickChartTooltip(comparison: hoveredClicks)
-                            .fixedSize()
-                            .onGeometryChange(for: CGFloat.self) { proxy in
-                                proxy.size.width
-                            } action: { width in
-                                tooltipWidth = width
-                            }
-                            .position(
-                                x: tooltipXPosition,
-                                y: plotFrame.minY + ClickTooltipLayout.centerYOffset
-                            )
-                    }
-                }
-            }
-            .chartXAxis {
-                AxisMarks(values: .stride(by: .day)) { value in
-                    AxisGridLine()
-                    AxisTick()
-
-                    if let date = value.as(Date.self) {
-                        AxisValueLabel {
-                            Text(DateDisplayFormatter.monthDayWeekday(from: date))
-                        }
-                    }
-                }
-            }
-            .chartYScale(domain: 0...axisConfiguration.upperBound)
-            .chartYAxis {
-                AxisMarks(values: axisConfiguration.values) {
-                    AxisGridLine()
-                    AxisValueLabel()
-                }
-            }
-            .chartYAxisLabel("クリック回数", position: .top, alignment: .leading)
-            .frame(height: Self.chartHeight)
-
+        WeeklyComparisonChart(
+            data: comparisonData,
+            day: \.day,
+            currentValue: \.currentValue,
+            previousValue: \.previousValue,
+            currentStyle: \.currentStyle,
+            previousStyle: AnyShapeStyle(ClickButtonSeries.previous.color),
+            totalText: "合計 \(ClickFormatter.countWithUnit(totalClicks.total))",
+            valueName: "クリック回数",
+            yAxisLabel: "クリック回数",
+            yAxisUpperBound: Double(axisConfiguration.upperBound),
+            yAxisValues: axisConfiguration.values.map(Double.init),
+            tooltipCenterYOffset: ClickTooltipLayout.centerYOffset
+        ) { comparison in
+            ClickChartTooltip(comparison: comparison)
+        } footer: {
             ClickChartLegend()
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func updateHoveredClicks(
-        at location: CGPoint,
-        proxy: ChartProxy,
-        geometry: GeometryProxy
-    ) {
-        guard
-            let plotAreaFrame = proxy.plotFrame,
-            geometry[plotAreaFrame].contains(location),
-            let date = proxy.value(
-                atX: location.x - geometry[plotAreaFrame].origin.x,
-                as: Date.self
-            )
-        else {
-            hoveredClicks = nil
-            return
-        }
-
-        let calendar = Calendar.current
-        hoveredClicks = comparisonData.first {
-            calendar.isDate($0.day, inSameDayAs: date)
         }
     }
 }
 
 private enum ClickTooltipLayout {
     static let centerYOffset: CGFloat = 47
-}
-
-private struct WeeklyClickHeader: View {
-    let firstDay: Date?
-    let lastDay: Date?
-    let total: Int
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(weekRangeText)
-                .font(.headline)
-            Text("合計 \(ClickFormatter.countWithUnit(total))")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private var weekRangeText: String {
-        guard let firstDay, let lastDay else {
-            return "週間"
-        }
-
-        return "\(DateDisplayFormatter.monthDayWeekday(from: firstDay))〜\(DateDisplayFormatter.monthDayWeekday(from: lastDay))"
-    }
 }
 
 private struct ClickChartLegend: View {
@@ -255,6 +114,9 @@ private struct DailyClickComparison: Identifiable {
     let previousTotal: Int
 
     var id: Date { day }
+    var currentValue: Double { Double(current.total) }
+    var previousValue: Double { Double(previousTotal) }
+    var currentStyle: AnyShapeStyle { AnyShapeStyle(currentBarStyle) }
 
     var currentBarStyle: LinearGradient {
         let segments: [(count: Int, color: Color)] = [
