@@ -43,6 +43,11 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// 別のアプリがアクティブになったとき、表示中の計測画面を閉じる。
+    func applicationDidResignActive(_ notification: Notification) {
+        popover.performClose(nil)
+    }
+
     /// クリックの種類に応じて計測画面を開閉するか、終了メニューを表示する。
     ///
     /// 右クリックまたはControlキーを押しながらのクリックではコンテキストメニューを表示する。
@@ -76,9 +81,9 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
         } else if popover.isShown {
             popover.performClose(nil)
         } else {
-            NSApp.activate()
+            // ポップオーバー内をすぐ操作できるよう、表示前にアプリを確実にアクティブにする。
+            NSApp.activate(ignoringOtherApps: true)
             popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
-            popover.contentViewController?.view.window?.makeKey()
         }
     }
 
