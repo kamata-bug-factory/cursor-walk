@@ -5,7 +5,7 @@
 
 import Foundation
 
-/// 移動距離の単位換算と表示形式をまとめたユーティリティ。
+/// ポイント単位の距離換算と表示形式をまとめた共通ユーティリティ。
 enum DistanceFormatter {
     /// 1ポイントあたりの距離（メートル）。
     static let metersPerPoint = 0.0254 / 72.0

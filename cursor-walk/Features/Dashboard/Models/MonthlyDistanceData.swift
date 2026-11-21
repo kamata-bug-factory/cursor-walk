@@ -1,17 +1,9 @@
-//
-//  MonthlyDistanceData.swift
-//  cursor-walk
-//
-
 import Foundation
 
 /// 本日以外の日別移動距離と、色の強度を決める境界値。
 struct MonthlyDistanceHistory {
-    private static let minimumIntensityLevel = 1
-    private static let maximumIntensityLevel = 4
-
     private let pointsByDay: [Date: Double]
-    private let sortedPositivePoints: [Double]
+    private let intensityScale: HeatmapIntensityScale<Double>
 
     init(
         dailyDistances: [DailyDistance],
@@ -19,7 +11,7 @@ struct MonthlyDistanceHistory {
         referenceDate: Date = .now
     ) {
         let referenceDay = calendar.startOfDay(for: referenceDate)
-        pointsByDay = dailyDistances.reduce(into: [Date: Double]()) { result, distance in
+        let pointsByDay = dailyDistances.reduce(into: [Date: Double]()) { result, distance in
             let day = calendar.startOfDay(for: distance.day)
             guard day != referenceDay else {
                 return
@@ -27,9 +19,10 @@ struct MonthlyDistanceHistory {
             result[day, default: 0] += distance.points
         }
 
-        sortedPositivePoints = pointsByDay.values
-            .filter { $0 > 0 }
-            .sorted()
+        self.pointsByDay = pointsByDay
+        intensityScale = HeatmapIntensityScale(
+            positiveValues: pointsByDay.values.filter { $0 > 0 }
+        )
     }
 
     func points(for day: Date, calendar: Calendar) -> Double {
@@ -37,20 +30,7 @@ struct MonthlyDistanceHistory {
     }
 
     func intensityLevel(for points: Double) -> Int {
-        guard points > 0 else {
-            return 0
-        }
-        guard !sortedPositivePoints.isEmpty else {
-            return Self.maximumIntensityLevel
-        }
-
-        let upperRank = (sortedPositivePoints.lastIndex { $0 <= points } ?? -1) + 1
-        let percentile = Double(upperRank) / Double(sortedPositivePoints.count)
-        let calculatedLevel = Int(ceil(percentile * Double(Self.maximumIntensityLevel)))
-        return max(
-            Self.minimumIntensityLevel,
-            min(Self.maximumIntensityLevel, calculatedLevel)
-        )
+        intensityScale.level(for: points, hasValue: points > 0)
     }
 }
 
@@ -67,43 +47,24 @@ struct MonthlyDistanceData {
         calendar: Calendar = .current,
         referenceDate: Date = .now
     ) {
-        var calendar = calendar
-        calendar.firstWeekday = 1
-
-        let monthStart = calendar.dateInterval(of: .month, for: month)?.start ?? calendar.startOfDay(for: month)
+        let grid = MonthlyCalendarGrid(month: month, calendar: calendar)
         let referenceDay = calendar.startOfDay(for: referenceDate)
-        let dayCount = calendar.range(of: .day, in: .month, for: monthStart)?.count ?? 0
-        let leadingDayCount = (
-            calendar.component(.weekday, from: monthStart) - calendar.firstWeekday + 7
-        ) % 7
-        let cellCount = Int(ceil(Double(leadingDayCount + dayCount) / 7.0)) * 7
 
-        let datedPoints: [(date: Date, points: Double, isInDisplayedMonth: Bool)] = (0..<cellCount).compactMap { offset in
-            guard let date = calendar.date(byAdding: .day, value: offset - leadingDayCount, to: monthStart) else {
-                return nil
-            }
-
-            let day = calendar.startOfDay(for: date)
+        self.month = grid.month
+        days = grid.days.map { gridDay in
+            let day = calendar.startOfDay(for: gridDay.date)
             let points = day == referenceDay
                 ? currentDayPoints
                 : history.points(for: day, calendar: calendar)
-            return (
-                date: date,
-                points: points,
-                isInDisplayedMonth: calendar.isDate(date, equalTo: monthStart, toGranularity: .month)
-            )
-        }
 
-        self.month = monthStart
-        days = datedPoints.map { day in
-            MonthlyDistanceDay(
-                date: day.date,
-                points: day.points,
-                intensityLevel: history.intensityLevel(for: day.points),
-                isInDisplayedMonth: day.isInDisplayedMonth
+            return MonthlyDistanceDay(
+                date: gridDay.date,
+                points: points,
+                intensityLevel: history.intensityLevel(for: points),
+                isInDisplayedMonth: gridDay.isInDisplayedMonth
             )
         }
-        totalPoints = datedPoints
+        totalPoints = days
             .filter(\.isInDisplayedMonth)
             .map(\.points)
             .reduce(0, +)

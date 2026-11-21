@@ -17,15 +17,13 @@ struct WeeklyScrollChart: View {
         }
     }
 
-    private var distanceUnit: ScrollDistanceUnit {
+    private var distanceUnit: DistanceChartUnit {
         let maximumPoints = (currentWeek + previousWeek).map(\.points).max() ?? 0
-        return DistanceFormatter.meters(for: maximumPoints) >= DistanceFormatter.metersPerKilometer
-            ? .kilometers
-            : .meters
+        return DistanceChartUnit(maximumPoints: maximumPoints)
     }
 
-    private var axis: ScrollAxisConfiguration {
-        ScrollAxisConfiguration(
+    private var axis: DistanceAxisConfiguration {
+        DistanceAxisConfiguration(
             maximumValue: comparisons.flatMap { [$0.currentValue, $0.previousValue] }.max() ?? 0
         )
     }
@@ -38,7 +36,7 @@ struct WeeklyScrollChart: View {
             previousValue: \.previousValue,
             currentStyle: \.currentStyle,
             previousStyle: AnyShapeStyle(Color.secondary.opacity(0.32)),
-            totalText: "合計 \(ScrollFormatter.formattedDistance(for: totalPoints))",
+            totalText: "合計 \(DistanceFormatter.formattedDistance(for: totalPoints))",
             valueName: "スクロール距離",
             yAxisLabel: "スクロール距離（\(distanceUnit.symbol)）",
             yAxisUpperBound: axis.upperBound,
@@ -49,9 +47,9 @@ struct WeeklyScrollChart: View {
                 Text(DateDisplayFormatter.monthDayWeekday(from: item.day))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-                Text(ScrollFormatter.formattedDistance(for: item.currentPoints))
+                Text(DistanceFormatter.formattedDistance(for: item.currentPoints))
                     .font(.caption.weight(.semibold))
-                Text("先週 \(ScrollFormatter.formattedDistance(for: item.previousPoints))")
+                Text("先週 \(DistanceFormatter.formattedDistance(for: item.previousPoints))")
                     .font(.caption2)
                 Text(WeeklyComparisonFormatter.formatted(
                     current: item.currentPoints,
@@ -75,45 +73,4 @@ private struct DailyScrollComparison: Identifiable {
     let previousValue: Double
     var id: Date { day }
     var currentStyle: AnyShapeStyle { AnyShapeStyle(Color.accentColor) }
-}
-
-private enum ScrollDistanceUnit {
-    case meters
-    case kilometers
-
-    var scale: Double {
-        switch self {
-        case .meters:
-            DistanceFormatter.metersPerPoint
-        case .kilometers:
-            DistanceFormatter.metersPerPoint / DistanceFormatter.metersPerKilometer
-        }
-    }
-
-    var symbol: String {
-        switch self {
-        case .meters: "m"
-        case .kilometers: "km"
-        }
-    }
-}
-
-private struct ScrollAxisConfiguration {
-    let upperBound: Double
-    let values: [Double]
-
-    init(maximumValue: Double) {
-        guard maximumValue > 0 else {
-            upperBound = 100
-            values = [0, 20, 40, 60, 80, 100]
-            return
-        }
-        let magnitude = pow(10, floor(log10(max(maximumValue / 5, 1))))
-        let normalized = maximumValue / 5 / magnitude
-        let multiplier: Double = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10
-        let step = multiplier * magnitude
-        let count = max(1, Int(ceil(maximumValue / step)))
-        upperBound = Double(count) * step
-        values = (0...count).map { Double($0) * step }
-    }
 }
