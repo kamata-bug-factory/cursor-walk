@@ -14,7 +14,7 @@ final class MouseScrollTracker: ObservableObject {
 
     private let calendar = Calendar.current
     private let fileManager = FileManager.default
-    private let storageURL: URL?
+    private let storage: JSONFileStorage<[DailyScrollInputDistance]>?
     private let currentDayProvider: CurrentDayProvider?
     private var currentDayObserverID: CurrentDayProvider.ObserverID?
     private var globalMonitor: Any?
@@ -26,7 +26,7 @@ final class MouseScrollTracker: ObservableObject {
 
     init(currentDayProvider: CurrentDayProvider) {
         self.currentDayProvider = currentDayProvider
-        storageURL = Self.makeStorageURL(using: fileManager)
+        storage = Self.makeStorageURL(using: fileManager).map(JSONFileStorage.init(url:))
         loadDailyDistances()
         currentDayObserverID = currentDayProvider.addObserver { [weak self] day in
             self?.updateCurrentDay(to: day)
@@ -37,7 +37,7 @@ final class MouseScrollTracker: ObservableObject {
     /// 開発時のSwiftUIプレビュー用
     init(previewDistances: [DailyScrollInputDistance], hasStorageError: Bool = false) {
         currentDayProvider = nil
-        storageURL = nil
+        storage = nil
         dailyDistances = previewDistances
         todayPoints = points(for: .now)
         storageState = hasStorageError ? .writeFailed : .available
@@ -156,17 +156,12 @@ final class MouseScrollTracker: ObservableObject {
     }
 
     private func loadDailyDistances() {
-        guard let storageURL else { return }
+        guard let storage else { return }
 
-        guard let data = try? Data(contentsOf: storageURL) else {
-            storageState = fileManager.fileExists(atPath: storageURL.path)
+        guard let decoded = try? storage.load() else {
+            storageState = fileManager.fileExists(atPath: storage.url.path)
                 ? .readFailed
                 : .available
-            return
-        }
-
-        guard let decoded = try? JSONDecoder().decode([DailyScrollInputDistance].self, from: data) else {
-            storageState = .readFailed
             return
         }
 
@@ -199,15 +194,13 @@ final class MouseScrollTracker: ObservableObject {
     private func saveDailyDistances() -> Bool {
         guard storageState.allowsWriting else { return false }
 
-        guard let storageURL,
-              let data = try? JSONEncoder().encode(dailyDistances)
-        else {
+        guard let storage else {
             storageState = .writeFailed
             return false
         }
 
         do {
-            try data.write(to: storageURL, options: .atomic)
+            try storage.save(dailyDistances)
             storageState = .available
             return true
         } catch {

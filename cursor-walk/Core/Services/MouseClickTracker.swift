@@ -18,7 +18,7 @@ final class MouseClickTracker: ObservableObject {
 
     private let calendar = Calendar.current
     private let fileManager = FileManager.default
-    private let storageURL: URL?
+    private let storage: JSONFileStorage<[DailyClickCount]>?
     private let currentDayProvider: CurrentDayProvider?
     private var currentDayObserverID: CurrentDayProvider.ObserverID?
     private var globalMonitor: Any?
@@ -30,7 +30,7 @@ final class MouseClickTracker: ObservableObject {
 
     init(currentDayProvider: CurrentDayProvider) {
         self.currentDayProvider = currentDayProvider
-        storageURL = Self.makeStorageURL(using: fileManager)
+        storage = Self.makeStorageURL(using: fileManager).map(JSONFileStorage.init(url:))
         loadDailyClicks()
         currentDayObserverID = currentDayProvider.addObserver { [weak self] day in
             self?.updateCurrentDay(to: day)
@@ -41,7 +41,7 @@ final class MouseClickTracker: ObservableObject {
     /// 開発時のSwiftUIプレビュー用
     init(previewClicks: [DailyClickCount], hasStorageError: Bool = false) {
         currentDayProvider = nil
-        storageURL = nil
+        storage = nil
         dailyClicks = previewClicks
         todayClicks = clicks(for: .now)
         storageState = hasStorageError ? .writeFailed : .available
@@ -148,19 +148,14 @@ final class MouseClickTracker: ObservableObject {
     }
 
     private func loadDailyClicks() {
-        guard let storageURL else {
+        guard let storage else {
             return
         }
 
-        guard let data = try? Data(contentsOf: storageURL) else {
-            storageState = fileManager.fileExists(atPath: storageURL.path)
+        guard let decodedClicks = try? storage.load() else {
+            storageState = fileManager.fileExists(atPath: storage.url.path)
                 ? .readFailed
                 : .available
-            return
-        }
-
-        guard let decodedClicks = try? JSONDecoder().decode([DailyClickCount].self, from: data) else {
-            storageState = .readFailed
             return
         }
 
@@ -202,16 +197,13 @@ final class MouseClickTracker: ObservableObject {
             return false
         }
 
-        guard
-            let storageURL,
-            let data = try? JSONEncoder().encode(dailyClicks)
-        else {
+        guard let storage else {
             storageState = .writeFailed
             return false
         }
 
         do {
-            try data.write(to: storageURL, options: .atomic)
+            try storage.save(dailyClicks)
             storageState = .available
             return true
         } catch {

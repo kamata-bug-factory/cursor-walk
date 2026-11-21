@@ -22,7 +22,7 @@ final class MouseTracker: ObservableObject {
     
     private let calendar = Calendar.current
     private let fileManager = FileManager.default
-    private let storageURL: URL?
+    private let storage: JSONFileStorage<[DailyDistance]>?
     private let currentDayProvider: CurrentDayProvider?
     private var currentDayObserverID: CurrentDayProvider.ObserverID?
     private var lastLocation: NSPoint?
@@ -36,7 +36,7 @@ final class MouseTracker: ObservableObject {
     /// 保存済みの日別距離を復元して、マウス移動の監視を開始する。
     init(currentDayProvider: CurrentDayProvider) {
         self.currentDayProvider = currentDayProvider
-        storageURL = Self.makeStorageURL(using: fileManager)
+        storage = Self.makeStorageURL(using: fileManager).map(JSONFileStorage.init(url:))
         loadDailyDistances()
         currentDayObserverID = currentDayProvider.addObserver { [weak self] day in
             self?.updateCurrentDay(to: day)
@@ -49,7 +49,7 @@ final class MouseTracker: ObservableObject {
     /// - Parameter previewDistances: 画面に表示する日別の移動距離。
     init(previewDistances: [DailyDistance], hasStorageError: Bool = false) {
         currentDayProvider = nil
-        storageURL = nil
+        storage = nil
         dailyDistances = previewDistances
         totalPoints = points(for: .now)
         storageState = hasStorageError ? .writeFailed : .available
@@ -189,19 +189,14 @@ final class MouseTracker: ObservableObject {
 
     /// Application Support内のJSONファイルから日別距離を復元する。
     private func loadDailyDistances() {
-        guard let storageURL else {
+        guard let storage else {
             return
         }
 
-        guard let data = try? Data(contentsOf: storageURL) else {
-            storageState = fileManager.fileExists(atPath: storageURL.path)
+        guard let decodedDistances = try? storage.load() else {
+            storageState = fileManager.fileExists(atPath: storage.url.path)
                 ? .readFailed
                 : .available
-            return
-        }
-
-        guard let decodedDistances = try? JSONDecoder().decode([DailyDistance].self, from: data) else {
-            storageState = .readFailed
             return
         }
 
@@ -244,16 +239,13 @@ final class MouseTracker: ObservableObject {
             return false
         }
 
-        guard
-            let storageURL,
-            let data = try? JSONEncoder().encode(dailyDistances)
-        else {
+        guard let storage else {
             storageState = .writeFailed
             return false
         }
 
         do {
-            try data.write(to: storageURL, options: .atomic)
+            try storage.save(dailyDistances)
             storageState = .available
             return true
         } catch {
