@@ -9,6 +9,7 @@ import SwiftUI
 struct ContentView: View {
     let mouseTracker: MouseTracker
     let clickTracker: MouseClickTracker
+    let scrollTracker: MouseScrollTracker
     let onClose: () -> Void
 
     @AppStorage("selectedMeasurementMetric")
@@ -18,6 +19,7 @@ struct ContentView: View {
         ContentViewContent(
             mouseTracker: mouseTracker,
             clickTracker: clickTracker,
+            scrollTracker: scrollTracker,
             selectedMetric: $selectedMetric,
             isMetricSelectionEnabled: true,
             onClose: onClose
@@ -28,6 +30,7 @@ struct ContentView: View {
 struct ContentViewContent: View {
     let mouseTracker: MouseTracker
     let clickTracker: MouseClickTracker
+    let scrollTracker: MouseScrollTracker
     @Binding var selectedMetric: MeasurementMetric
     let isMetricSelectionEnabled: Bool
     let onClose: () -> Void
@@ -36,8 +39,10 @@ struct ContentViewContent: View {
         VStack(spacing: 12) {
             if selectedMetric == .distance {
                 DistanceTabs(mouseTracker: mouseTracker)
-            } else {
+            } else if selectedMetric == .clicks {
                 ClickTabs(clickTracker: clickTracker)
+            } else {
+                ScrollTabs(scrollTracker: scrollTracker)
             }
 
             ContentFooter(
@@ -79,6 +84,7 @@ private struct ContentFooter: View {
 enum MeasurementMetric: String, CaseIterable, Identifiable {
     case distance
     case clicks
+    case scrolls
 
     var id: String { rawValue }
 
@@ -88,7 +94,34 @@ enum MeasurementMetric: String, CaseIterable, Identifiable {
             "移動距離"
         case .clicks:
             "クリック回数"
+        case .scrolls:
+            "スクロール距離"
         }
+    }
+}
+
+private struct ScrollTabs: View {
+    @ObservedObject var scrollTracker: MouseScrollTracker
+
+    var body: some View {
+        let weeklyData = WeeklyScrollData(pointsForDate: scrollTracker.points(for:))
+
+        TabView {
+            ScrollSummary(date: .now, points: scrollTracker.todayPoints)
+                .tabItem { Label("本日", systemImage: "computermouse.and.arrowtriangle_2_outward") }
+            WeeklyScrollChart(
+                currentWeek: weeklyData.currentWeek,
+                previousWeek: weeklyData.previousWeek,
+                totalPoints: weeklyData.totalPoints
+            )
+            .tabItem { Label("週間", systemImage: "chart.bar") }
+            MonthlyScrollHeatmap(
+                dailyDistances: scrollTracker.dailyDistances,
+                currentDayPoints: scrollTracker.todayPoints
+            )
+            .tabItem { Label("月間", systemImage: "calendar") }
+        }
+        .frame(height: AppLayout.tabHeight)
     }
 }
 

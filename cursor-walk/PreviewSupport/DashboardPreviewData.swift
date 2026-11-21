@@ -44,17 +44,30 @@ private enum DashboardPreviewData {
             )
         }
     }
+
+    static var dailyScrollDistances: [DailyScrollDistance] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: .now)
+        return (0..<30).compactMap { offset in
+            guard let day = calendar.date(byAdding: .day, value: offset - 29, to: today) else {
+                return nil
+            }
+            return DailyScrollDistance(day: day, points: Double(8_000 + offset * 1_700))
+        }
+    }
 }
 
 private struct ContentViewPreview: View {
     @StateObject private var mouseTracker: MouseTracker
     @StateObject private var clickTracker: MouseClickTracker
+    @StateObject private var scrollTracker: MouseScrollTracker
     private let selectedMetric: MeasurementMetric
 
     init(
         selectedMetric: MeasurementMetric,
         dailyDistances: [DailyDistance],
-        dailyClicks: [DailyClickCount]
+        dailyClicks: [DailyClickCount],
+        dailyScrollDistances: [DailyScrollDistance] = DashboardPreviewData.dailyScrollDistances
     ) {
         self.selectedMetric = selectedMetric
         _mouseTracker = StateObject(
@@ -63,12 +76,16 @@ private struct ContentViewPreview: View {
         _clickTracker = StateObject(
             wrappedValue: MouseClickTracker(previewClicks: dailyClicks)
         )
+        _scrollTracker = StateObject(
+            wrappedValue: MouseScrollTracker(previewDistances: dailyScrollDistances)
+        )
     }
 
     var body: some View {
         ContentViewContent(
             mouseTracker: mouseTracker,
             clickTracker: clickTracker,
+            scrollTracker: scrollTracker,
             selectedMetric: .constant(selectedMetric),
             isMetricSelectionEnabled: false,
             onClose: {}
@@ -92,6 +109,14 @@ private struct ContentViewPreview: View {
     )
 }
 
+#Preview("スクロール距離・記録あり") {
+    ContentViewPreview(
+        selectedMetric: .scrolls,
+        dailyDistances: DashboardPreviewData.dailyDistances,
+        dailyClicks: DashboardPreviewData.dailyClicks
+    )
+}
+
 #Preview("移動距離・記録なし") {
     ContentViewPreview(
         selectedMetric: .distance,
@@ -105,5 +130,14 @@ private struct ContentViewPreview: View {
         selectedMetric: .clicks,
         dailyDistances: [],
         dailyClicks: []
+    )
+}
+
+#Preview("スクロール距離・記録なし") {
+    ContentViewPreview(
+        selectedMetric: .scrolls,
+        dailyDistances: [],
+        dailyClicks: [],
+        dailyScrollDistances: []
     )
 }

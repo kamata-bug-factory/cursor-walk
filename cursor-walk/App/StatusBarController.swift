@@ -7,6 +7,7 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
     private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
     private lazy var mouseTracker = MouseTracker()
     private lazy var clickTracker = MouseClickTracker()
+    private lazy var scrollTracker = MouseScrollTracker()
     private var statusItem: NSStatusItem?
     private let popover = NSPopover()
 
@@ -23,7 +24,8 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
         popover.contentViewController = NSHostingController(
             rootView: ContentView(
                 mouseTracker: mouseTracker,
-                clickTracker: clickTracker
+                clickTracker: clickTracker,
+                scrollTracker: scrollTracker
             ) { [weak self] in
                 self?.popover.performClose(nil)
             }
@@ -99,7 +101,8 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
 
         let distanceSaved = mouseTracker.saveBeforeQuitting()
         let clicksSaved = clickTracker.saveBeforeQuitting()
-        if distanceSaved && clicksSaved {
+        let scrollsSaved = scrollTracker.saveBeforeQuitting()
+        if distanceSaved && clicksSaved && scrollsSaved {
             return .terminateNow
         }
 
@@ -122,6 +125,7 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
 
         mouseTracker.stopTracking()
         clickTracker.stopTracking()
+        scrollTracker.stopTracking()
         if let statusItem {
             NSStatusBar.system.removeStatusItem(statusItem)
         }
