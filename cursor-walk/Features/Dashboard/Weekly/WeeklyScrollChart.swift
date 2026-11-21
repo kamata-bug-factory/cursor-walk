@@ -11,15 +11,10 @@ struct WeeklyScrollChart: View {
                 day: $0.day,
                 currentPoints: $0.points,
                 previousPoints: $1.points,
-                currentValue: $0.points * distanceUnit.scale,
-                previousValue: $1.points * distanceUnit.scale
+                currentValue: $0.points,
+                previousValue: $1.points
             )
         }
-    }
-
-    private var distanceUnit: DistanceChartUnit {
-        let maximumPoints = (currentWeek + previousWeek).map(\.points).max() ?? 0
-        return DistanceChartUnit(maximumPoints: maximumPoints)
     }
 
     private var axis: DistanceAxisConfiguration {
@@ -36,9 +31,9 @@ struct WeeklyScrollChart: View {
             previousValue: \.previousValue,
             currentStyle: \.currentStyle,
             previousStyle: AnyShapeStyle(Color.secondary.opacity(0.32)),
-            totalText: "合計 \(DistanceFormatter.formattedDistance(for: totalPoints))",
+            totalText: "合計 \(ScrollActivityFormatter.formatted(totalPoints))",
             valueName: "スクロール操作量",
-            yAxisLabel: "スクロール操作量（\(distanceUnit.symbol)）",
+            yAxisLabel: "スクロール操作量",
             yAxisUpperBound: axis.upperBound,
             yAxisValues: axis.values,
             tooltipCenterYOffset: 38
@@ -47,9 +42,9 @@ struct WeeklyScrollChart: View {
                 Text(DateDisplayFormatter.monthDayWeekday(from: item.day))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-                Text(DistanceFormatter.formattedDistance(for: item.currentPoints))
+                Text(ScrollActivityFormatter.formatted(item.currentPoints))
                     .font(.caption.weight(.semibold))
-                Text("先週 \(DistanceFormatter.formattedDistance(for: item.previousPoints))")
+                Text("先週 \(ScrollActivityFormatter.formatted(item.previousPoints))")
                     .font(.caption2)
                 Text(WeeklyComparisonFormatter.formatted(
                     current: item.currentPoints,

@@ -32,15 +32,15 @@ struct MonthlyScrollHeatmap: View {
             intensityLevel: \.intensityLevel,
             isInDisplayedMonth: \.isInDisplayedMonth,
             hasValue: \.hasValue,
-            totalText: "合計 \(DistanceFormatter.formattedDistance(for: data.totalPoints))",
-            legendAccessibilityLabel: "スクロール操作量の色。薄いほど短く、濃いほど長い",
+            totalText: "合計 \(ScrollActivityFormatter.formatted(data.totalPoints))",
+            legendAccessibilityLabel: "スクロール操作量の色。薄いほど少なく、濃いほど多い",
             canMoveBackward: displayedMonth > earliestMonth,
             canMoveForward: displayedMonth < currentMonth,
             moveBackward: { moveMonth(by: -1) },
             moveForward: { moveMonth(by: 1) },
-            accessibilityValue: { DistanceFormatter.formattedDistance(for: $0.points) }
+            accessibilityValue: { ScrollActivityFormatter.formatted($0.points) }
         ) { day in
-            Text("\(DateDisplayFormatter.yearMonthDayWeekday(from: day.date)) \(DistanceFormatter.formattedDistance(for: day.points))")
+            Text("\(DateDisplayFormatter.yearMonthDayWeekday(from: day.date)) \(ScrollActivityFormatter.formatted(day.points))")
                 .font(.caption)
                 .tooltipStyle()
         }

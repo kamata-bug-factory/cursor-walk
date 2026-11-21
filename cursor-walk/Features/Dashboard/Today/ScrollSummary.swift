@@ -13,11 +13,9 @@ struct ScrollSummary: View {
     var body: some View {
         TodaySummary(
             title: "\(date.formatted(Self.dateStyle))のスクロール操作量",
-            primaryValue: DistanceFormatter.formattedDistance(for: points)
+            primaryValue: ScrollActivityFormatter.formatted(points)
         ) {
-            Text("\(Int(points)) pts")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            EmptyView()
         }
     }
 }
