@@ -95,7 +95,7 @@ enum MeasurementMetric: String, CaseIterable, Identifiable {
         case .clicks:
             "クリック回数"
         case .scrolls:
-            "スクロール距離"
+            "スクロール操作量"
         }
     }
 }

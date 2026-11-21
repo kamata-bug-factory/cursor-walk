@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct WeeklyScrollChart: View {
-    let currentWeek: [DailyScrollDistance]
-    let previousWeek: [DailyScrollDistance]
+    let currentWeek: [DailyScrollInputDistance]
+    let previousWeek: [DailyScrollInputDistance]
     let totalPoints: Double
 
     private var comparisons: [DailyScrollComparison] {
@@ -37,8 +37,8 @@ struct WeeklyScrollChart: View {
             currentStyle: \.currentStyle,
             previousStyle: AnyShapeStyle(Color.secondary.opacity(0.32)),
             totalText: "合計 \(DistanceFormatter.formattedDistance(for: totalPoints))",
-            valueName: "スクロール距離",
-            yAxisLabel: "スクロール距離（\(distanceUnit.symbol)）",
+            valueName: "スクロール操作量",
+            yAxisLabel: "スクロール操作量（\(distanceUnit.symbol)）",
             yAxisUpperBound: axis.upperBound,
             yAxisValues: axis.values,
             tooltipCenterYOffset: 38

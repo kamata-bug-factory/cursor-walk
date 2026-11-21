@@ -1,12 +1,12 @@
 import Foundation
 
-/// 本日以外の日別スクロール距離と、色の強度を決める境界値。
+/// 本日以外の日別スクロール操作量と、色の強度を決める境界値。
 struct MonthlyScrollHistory {
     private let pointsByDay: [Date: Double]
     private let intensityScale: HeatmapIntensityScale<Double>
 
     init(
-        dailyDistances: [DailyScrollDistance],
+        dailyDistances: [DailyScrollInputDistance],
         calendar: Calendar = .current,
         referenceDate: Date = .now
     ) {

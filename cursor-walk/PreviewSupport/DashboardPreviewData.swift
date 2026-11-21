@@ -45,14 +45,14 @@ private enum DashboardPreviewData {
         }
     }
 
-    static var dailyScrollDistances: [DailyScrollDistance] {
+    static var dailyScrollDistances: [DailyScrollInputDistance] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: .now)
         return (0..<30).compactMap { offset in
             guard let day = calendar.date(byAdding: .day, value: offset - 29, to: today) else {
                 return nil
             }
-            return DailyScrollDistance(day: day, points: Double(8_000 + offset * 1_700))
+            return DailyScrollInputDistance(day: day, points: Double(8_000 + offset * 1_700))
         }
     }
 }
@@ -67,7 +67,7 @@ private struct ContentViewPreview: View {
         selectedMetric: MeasurementMetric,
         dailyDistances: [DailyDistance],
         dailyClicks: [DailyClickCount],
-        dailyScrollDistances: [DailyScrollDistance] = DashboardPreviewData.dailyScrollDistances
+        dailyScrollDistances: [DailyScrollInputDistance] = DashboardPreviewData.dailyScrollDistances
     ) {
         self.selectedMetric = selectedMetric
         _mouseTracker = StateObject(
@@ -109,7 +109,7 @@ private struct ContentViewPreview: View {
     )
 }
 
-#Preview("スクロール距離・記録あり") {
+#Preview("スクロール操作量・記録あり") {
     ContentViewPreview(
         selectedMetric: .scrolls,
         dailyDistances: DashboardPreviewData.dailyDistances,
@@ -133,7 +133,7 @@ private struct ContentViewPreview: View {
     )
 }
 
-#Preview("スクロール距離・記録なし") {
+#Preview("スクロール操作量・記録なし") {
     ContentViewPreview(
         selectedMetric: .scrolls,
         dailyDistances: [],

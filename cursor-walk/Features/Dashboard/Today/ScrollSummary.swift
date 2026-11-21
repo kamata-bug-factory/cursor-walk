@@ -12,7 +12,7 @@ struct ScrollSummary: View {
 
     var body: some View {
         TodaySummary(
-            title: "\(date.formatted(Self.dateStyle))のスクロール距離",
+            title: "\(date.formatted(Self.dateStyle))のスクロール操作量",
             primaryValue: DistanceFormatter.formattedDistance(for: points)
         ) {
             Text("\(Int(points)) pts")

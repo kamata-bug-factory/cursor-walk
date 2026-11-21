@@ -1,12 +1,12 @@
 import SwiftUI
 
 struct MonthlyScrollHeatmap: View {
-    let dailyDistances: [DailyScrollDistance]
+    let dailyDistances: [DailyScrollInputDistance]
     let currentDayPoints: Double
     @State private var displayedMonth: Date
     @State private var history: MonthlyScrollHistory
 
-    init(dailyDistances: [DailyScrollDistance], currentDayPoints: Double) {
+    init(dailyDistances: [DailyScrollInputDistance], currentDayPoints: Double) {
         let referenceDate = Date.now
         self.dailyDistances = dailyDistances
         self.currentDayPoints = currentDayPoints
@@ -33,7 +33,7 @@ struct MonthlyScrollHeatmap: View {
             isInDisplayedMonth: \.isInDisplayedMonth,
             hasValue: \.hasValue,
             totalText: "合計 \(DistanceFormatter.formattedDistance(for: data.totalPoints))",
-            legendAccessibilityLabel: "スクロール距離の色。薄いほど短く、濃いほど長い",
+            legendAccessibilityLabel: "スクロール操作量の色。薄いほど短く、濃いほど長い",
             canMoveBackward: displayedMonth > earliestMonth,
             canMoveForward: displayedMonth < currentMonth,
             moveBackward: { moveMonth(by: -1) },

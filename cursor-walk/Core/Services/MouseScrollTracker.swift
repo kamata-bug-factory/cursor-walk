@@ -2,14 +2,14 @@ import AppKit
 import Combine
 import Foundation
 
-/// スクロール入力を論理ポイントへ換算して計測し、日別に保存する。
+/// スクロール操作量を論理ポイントへ換算して計測し、日別に保存する。
 final class MouseScrollTracker: ObservableObject {
     private static let retentionDays = 400
     private static let saveDelay: TimeInterval = 1
     private static let fallbackBackingScaleFactor: CGFloat = 2
 
     @Published private(set) var todayPoints = 0.0
-    @Published private(set) var dailyDistances: [DailyScrollDistance] = []
+    @Published private(set) var dailyDistances: [DailyScrollInputDistance] = []
 
     private let calendar = Calendar.current
     private let fileManager = FileManager.default
@@ -33,7 +33,7 @@ final class MouseScrollTracker: ObservableObject {
     }
 
     /// 開発時のSwiftUIプレビュー用
-    init(previewDistances: [DailyScrollDistance]) {
+    init(previewDistances: [DailyScrollInputDistance]) {
         currentDayProvider = nil
         storageURL = nil
         dailyDistances = previewDistances
@@ -144,7 +144,7 @@ final class MouseScrollTracker: ObservableObject {
             return index
         }
 
-        dailyDistances.append(DailyScrollDistance(day: day, points: 0))
+        dailyDistances.append(DailyScrollInputDistance(day: day, points: 0))
         dailyDistances.sort { $0.day < $1.day }
         guard let index = dailyDistances.firstIndex(where: { $0.day == day }) else { return nil }
         currentDay = day
@@ -155,7 +155,7 @@ final class MouseScrollTracker: ObservableObject {
     private func loadDailyDistances() {
         guard let storageURL,
               let data = try? Data(contentsOf: storageURL),
-              let decoded = try? JSONDecoder().decode([DailyScrollDistance].self, from: data)
+              let decoded = try? JSONDecoder().decode([DailyScrollInputDistance].self, from: data)
         else { return }
 
         dailyDistances = decoded
@@ -215,7 +215,7 @@ final class MouseScrollTracker: ObservableObject {
         let directoryURL = supportURL.appendingPathComponent("cursor-walk", isDirectory: true)
         do {
             try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
-            return directoryURL.appendingPathComponent("daily-scroll-distances.json")
+            return directoryURL.appendingPathComponent("daily-scroll-input-distances.json")
         } catch {
             return nil
         }

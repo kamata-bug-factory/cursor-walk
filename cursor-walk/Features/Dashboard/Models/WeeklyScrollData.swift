@@ -1,9 +1,9 @@
 import Foundation
 
-/// 日曜始まりの今週と前週の日別スクロール距離。
+/// 日曜始まりの今週と前週の日別スクロール操作量。
 struct WeeklyScrollData {
-    let currentWeek: [DailyScrollDistance]
-    let previousWeek: [DailyScrollDistance]
+    let currentWeek: [DailyScrollInputDistance]
+    let previousWeek: [DailyScrollInputDistance]
     let totalPoints: Double
 
     init(
@@ -17,10 +17,10 @@ struct WeeklyScrollData {
         )
 
         currentWeek = dateRange.currentWeek.map { day in
-            DailyScrollDistance(day: day, points: pointsForDate(day))
+            DailyScrollInputDistance(day: day, points: pointsForDate(day))
         }
         previousWeek = dateRange.previousWeek.map { day in
-            DailyScrollDistance(day: day, points: pointsForDate(day))
+            DailyScrollInputDistance(day: day, points: pointsForDate(day))
         }
         totalPoints = currentWeek.map(\.points).reduce(0, +)
     }
