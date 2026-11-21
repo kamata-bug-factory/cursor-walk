@@ -16,7 +16,9 @@ struct MonthlyDistanceHistory {
             guard day != referenceDay else {
                 return
             }
-            result[day, default: 0] += distance.points
+            if result[day] == nil {
+                result[day] = distance.points
+            }
         }
 
         self.pointsByDay = pointsByDay

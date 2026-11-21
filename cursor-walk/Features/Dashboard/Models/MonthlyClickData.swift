@@ -16,7 +16,9 @@ struct MonthlyClickHistory {
             guard day != referenceDay else {
                 return
             }
-            result[day] = (result[day] ?? ClickBreakdown()) + record.clicks
+            if result[day] == nil {
+                result[day] = record.clicks
+            }
         }
 
         self.clicksByDay = clicksByDay

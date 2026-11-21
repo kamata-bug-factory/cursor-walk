@@ -16,7 +16,9 @@ struct MonthlyScrollHistory {
             guard day != referenceDay else {
                 return
             }
-            result[day, default: 0] += record.points
+            if result[day] == nil {
+                result[day] = record.points
+            }
         }
 
         self.pointsByDay = pointsByDay
