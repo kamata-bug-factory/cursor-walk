@@ -44,7 +44,7 @@ struct WeeklyClickChart: View {
             previousStyle: AnyShapeStyle(ClickButtonSeries.previous.color),
             totalText: "合計 \(ClickFormatter.countWithUnit(totalClicks.total))",
             valueName: "クリック回数",
-            yAxisLabel: "クリック回数",
+            yAxisLabel: "クリック回数（回）",
             yAxisUpperBound: Double(axisConfiguration.upperBound),
             yAxisValues: axisConfiguration.values.map(Double.init),
             tooltipCenterYOffset: ClickTooltipLayout.centerYOffset
