@@ -3,6 +3,7 @@ import Combine
 import Foundation
 
 /// スクロール操作量を論理ポイントへ換算して計測し、日別に保存する。
+@MainActor
 final class MouseScrollTracker: ObservableObject {
     private static let retentionDays = 400
     private static let saveDelay: TimeInterval = 1
@@ -43,7 +44,7 @@ final class MouseScrollTracker: ObservableObject {
         storageState = hasStorageError ? .writeFailed : .available
     }
 
-    deinit {
+    isolated deinit {
         currentDayProvider?.removeObserver(currentDayObserverID)
         stopTracking()
         pendingSaveWorkItem?.cancel()
@@ -89,9 +90,7 @@ final class MouseScrollTracker: ObservableObject {
         guard let points = scrollPoints(for: event) else { return }
         guard points > 0 else { return }
 
-        DispatchQueue.main.async { [weak self] in
-            self?.record(points: points, at: .now)
-        }
+        record(points: points, at: .now)
     }
 
     /// 精密差分は各軸の絶対値を加算し、通常ホイールのピクセル差分は論理ポイントへ変換する。

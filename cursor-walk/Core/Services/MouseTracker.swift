@@ -8,6 +8,7 @@ import Combine
 import Foundation
 
 /// マウスの移動距離を計測・管理する。
+@MainActor
 final class MouseTracker: ObservableObject {
     private static let retentionDays = 400
     private static let maximumTrackableDistance: CGFloat = 500
@@ -56,7 +57,7 @@ final class MouseTracker: ObservableObject {
     }
 
     /// イベント監視を解除し、未保存の距離をディスクへ書き込む。
-    deinit {
+    isolated deinit {
         currentDayProvider?.removeObserver(currentDayObserverID)
         stopTracking()
         pendingSaveWorkItem?.cancel()
@@ -133,9 +134,7 @@ final class MouseTracker: ObservableObject {
             return
         }
 
-        DispatchQueue.main.async { [weak self] in
-            self?.record(distance: distance, at: .now)
-        }
+        record(distance: distance, at: .now)
     }
 
     /// 指定時刻の日別バケットへ距離を加算し、保存を予約する。

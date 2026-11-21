@@ -1,6 +1,7 @@
 import Foundation
 
 /// 入力イベントを契機に日付変更を検知し、各計測サービスへ通知する。
+@MainActor
 final class CurrentDayProvider {
     typealias ObserverID = UUID
 

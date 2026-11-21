@@ -8,6 +8,7 @@ import Combine
 import Foundation
 
 /// マウスクリックを計測し、日別に保存する。
+@MainActor
 final class MouseClickTracker: ObservableObject {
     private static let retentionDays = 400
     private static let saveDelay: TimeInterval = 1
@@ -47,7 +48,7 @@ final class MouseClickTracker: ObservableObject {
         storageState = hasStorageError ? .writeFailed : .available
     }
 
-    deinit {
+    isolated deinit {
         currentDayProvider?.removeObserver(currentDayObserverID)
         stopTracking()
         pendingSaveWorkItem?.cancel()
@@ -99,9 +100,7 @@ final class MouseClickTracker: ObservableObject {
     }
 
     private func handleClick(buttonNumber: Int) {
-        DispatchQueue.main.async { [weak self] in
-            self?.record(buttonNumber: buttonNumber, at: .now)
-        }
+        record(buttonNumber: buttonNumber, at: .now)
     }
 
     private func record(buttonNumber: Int, at date: Date) {
