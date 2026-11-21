@@ -72,14 +72,14 @@ final class MouseTracker: ObservableObject {
 
         // 他のアプリ上でのマウス移動も監視する。
         globalMonitor = NSEvent.addGlobalMonitorForEvents(
-            matching: [.mouseMoved, .leftMouseDragged, .rightMouseDragged]
+            matching: [.mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged]
         ) { [weak self] _ in
             self?.handleMovement(to: NSEvent.mouseLocation)
         }
 
         // 自アプリ内のマウス移動も監視する。
         localMonitor = NSEvent.addLocalMonitorForEvents(
-            matching: [.mouseMoved, .leftMouseDragged, .rightMouseDragged]
+            matching: [.mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged]
         ) { [weak self] event in
             self?.handleMovement(to: NSEvent.mouseLocation)
             return event
