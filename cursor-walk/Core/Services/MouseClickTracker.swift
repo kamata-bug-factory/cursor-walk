@@ -17,7 +17,7 @@ final class MouseClickTracker: ObservableObject {
     @Published private(set) var dailyClicks: [DailyClickCount] = []
     var hasStorageError: Bool { storageState.hasError }
 
-    private let calendar = Calendar.current
+    private let calendar = Calendar.autoupdatingCurrent
     private let fileManager = FileManager.default
     private let storage: JSONFileStorage<[DailyClickCount]>?
     private let currentDayProvider: CurrentDayProvider?
@@ -117,18 +117,24 @@ final class MouseClickTracker: ObservableObject {
 
     private func updateCurrentDay(to day: Date) {
         currentDay = day
-        currentDayIndex = dailyClicks.firstIndex(where: { $0.day == day })
+        currentDayIndex = dailyClicks.firstIndex {
+            calendar.isDate($0.day, inSameDayAs: day)
+        }
         todayClicks = currentDayIndex.map { dailyClicks[$0].clicks } ?? ClickBreakdown()
     }
 
     private func indexForCurrentDay(_ day: Date) -> Int? {
-        if currentDay == day, let currentDayIndex {
+        if let currentDay,
+           calendar.isDate(currentDay, inSameDayAs: day),
+           let currentDayIndex {
             return currentDayIndex
         }
 
         pruneClicks(keepingFrom: day)
 
-        if let index = dailyClicks.firstIndex(where: { $0.day == day }) {
+        if let index = dailyClicks.firstIndex(where: {
+            calendar.isDate($0.day, inSameDayAs: day)
+        }) {
             currentDay = day
             currentDayIndex = index
             return index
@@ -137,7 +143,9 @@ final class MouseClickTracker: ObservableObject {
         dailyClicks.append(DailyClickCount(day: day, clicks: ClickBreakdown()))
         dailyClicks.sort { $0.day < $1.day }
 
-        guard let index = dailyClicks.firstIndex(where: { $0.day == day }) else {
+        guard let index = dailyClicks.firstIndex(where: {
+            calendar.isDate($0.day, inSameDayAs: day)
+        }) else {
             return nil
         }
 
@@ -162,7 +170,9 @@ final class MouseClickTracker: ObservableObject {
         let today = calendar.startOfDay(for: .now)
         pruneClicks(keepingFrom: today)
 
-        if let index = dailyClicks.firstIndex(where: { $0.day == today }) {
+        if let index = dailyClicks.firstIndex(where: {
+            calendar.isDate($0.day, inSameDayAs: today)
+        }) {
             currentDay = today
             currentDayIndex = index
             todayClicks = dailyClicks[index].clicks
@@ -179,7 +189,10 @@ final class MouseClickTracker: ObservableObject {
         }
 
         let retainedClicks = dailyClicks
-            .filter { $0.day >= earliestDay && $0.day <= currentDay }
+            .filter {
+                calendar.compare($0.day, to: earliestDay, toGranularity: .day) != .orderedAscending
+                    && calendar.compare($0.day, to: currentDay, toGranularity: .day) != .orderedDescending
+            }
             .sorted { $0.day < $1.day }
 
         guard retainedClicks != dailyClicks else {

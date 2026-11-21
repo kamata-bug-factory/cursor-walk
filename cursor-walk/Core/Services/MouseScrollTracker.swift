@@ -13,7 +13,7 @@ final class MouseScrollTracker: ObservableObject {
     @Published private(set) var dailyDistances: [DailyScrollInputDistance] = []
     var hasStorageError: Bool { storageState.hasError }
 
-    private let calendar = Calendar.current
+    private let calendar = Calendar.autoupdatingCurrent
     private let fileManager = FileManager.default
     private let storage: JSONFileStorage<[DailyScrollInputDistance]>?
     private let currentDayProvider: CurrentDayProvider?
@@ -132,15 +132,23 @@ final class MouseScrollTracker: ObservableObject {
 
     private func updateCurrentDay(to day: Date) {
         currentDay = day
-        currentDayIndex = dailyDistances.firstIndex(where: { $0.day == day })
+        currentDayIndex = dailyDistances.firstIndex {
+            calendar.isDate($0.day, inSameDayAs: day)
+        }
         todayPoints = currentDayIndex.map { dailyDistances[$0].points } ?? 0
     }
 
     private func indexForCurrentDay(_ day: Date) -> Int? {
-        if currentDay == day, let currentDayIndex { return currentDayIndex }
+        if let currentDay,
+           calendar.isDate(currentDay, inSameDayAs: day),
+           let currentDayIndex {
+            return currentDayIndex
+        }
         pruneDistances(keepingFrom: day)
 
-        if let index = dailyDistances.firstIndex(where: { $0.day == day }) {
+        if let index = dailyDistances.firstIndex(where: {
+            calendar.isDate($0.day, inSameDayAs: day)
+        }) {
             currentDay = day
             currentDayIndex = index
             return index
@@ -148,7 +156,9 @@ final class MouseScrollTracker: ObservableObject {
 
         dailyDistances.append(DailyScrollInputDistance(day: day, points: 0))
         dailyDistances.sort { $0.day < $1.day }
-        guard let index = dailyDistances.firstIndex(where: { $0.day == day }) else { return nil }
+        guard let index = dailyDistances.firstIndex(where: {
+            calendar.isDate($0.day, inSameDayAs: day)
+        }) else { return nil }
         currentDay = day
         currentDayIndex = index
         return index
@@ -167,7 +177,9 @@ final class MouseScrollTracker: ObservableObject {
         dailyDistances = decoded
         let today = calendar.startOfDay(for: .now)
         pruneDistances(keepingFrom: today)
-        if let index = dailyDistances.firstIndex(where: { $0.day == today }) {
+        if let index = dailyDistances.firstIndex(where: {
+            calendar.isDate($0.day, inSameDayAs: today)
+        }) {
             currentDay = today
             currentDayIndex = index
             todayPoints = dailyDistances[index].points
@@ -182,7 +194,10 @@ final class MouseScrollTracker: ObservableObject {
         ) else { return }
 
         let retained = dailyDistances
-            .filter { $0.day >= earliestDay && $0.day <= currentDay }
+            .filter {
+                calendar.compare($0.day, to: earliestDay, toGranularity: .day) != .orderedAscending
+                    && calendar.compare($0.day, to: currentDay, toGranularity: .day) != .orderedDescending
+            }
             .sorted { $0.day < $1.day }
         guard retained != dailyDistances else { return }
         dailyDistances = retained

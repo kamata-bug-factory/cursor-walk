@@ -9,7 +9,7 @@ final class CurrentDayProvider {
     private var currentDay: Date
     private var observers: [ObserverID: (Date) -> Void] = [:]
 
-    init(calendar: Calendar = .current, referenceDate: Date = .now) {
+    init(calendar: Calendar = .autoupdatingCurrent, referenceDate: Date = .now) {
         self.calendar = calendar
         currentDay = calendar.startOfDay(for: referenceDate)
     }
@@ -28,7 +28,7 @@ final class CurrentDayProvider {
 
     func refresh(at date: Date) {
         let day = calendar.startOfDay(for: date)
-        guard day != currentDay else { return }
+        guard !calendar.isDate(day, inSameDayAs: currentDay) else { return }
 
         currentDay = day
         for observer in observers.values {
