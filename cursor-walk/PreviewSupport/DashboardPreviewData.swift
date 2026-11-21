@@ -67,17 +67,27 @@ private struct ContentViewPreview: View {
         selectedMetric: MeasurementMetric,
         dailyDistances: [DailyDistance],
         dailyClicks: [DailyClickCount],
-        dailyScrollDistances: [DailyScrollInputDistance] = DashboardPreviewData.dailyScrollDistances
+        dailyScrollDistances: [DailyScrollInputDistance] = DashboardPreviewData.dailyScrollDistances,
+        hasStorageError: Bool = false
     ) {
         self.selectedMetric = selectedMetric
         _mouseTracker = StateObject(
-            wrappedValue: MouseTracker(previewDistances: dailyDistances)
+            wrappedValue: MouseTracker(
+                previewDistances: dailyDistances,
+                hasStorageError: hasStorageError
+            )
         )
         _clickTracker = StateObject(
-            wrappedValue: MouseClickTracker(previewClicks: dailyClicks)
+            wrappedValue: MouseClickTracker(
+                previewClicks: dailyClicks,
+                hasStorageError: hasStorageError
+            )
         )
         _scrollTracker = StateObject(
-            wrappedValue: MouseScrollTracker(previewDistances: dailyScrollDistances)
+            wrappedValue: MouseScrollTracker(
+                previewDistances: dailyScrollDistances,
+                hasStorageError: hasStorageError
+            )
         )
     }
 
@@ -114,6 +124,15 @@ private struct ContentViewPreview: View {
         selectedMetric: .scrolls,
         dailyDistances: DashboardPreviewData.dailyDistances,
         dailyClicks: DashboardPreviewData.dailyClicks
+    )
+}
+
+#Preview("保存エラー") {
+    ContentViewPreview(
+        selectedMetric: .distance,
+        dailyDistances: DashboardPreviewData.dailyDistances,
+        dailyClicks: DashboardPreviewData.dailyClicks,
+        hasStorageError: true
     )
 }
 

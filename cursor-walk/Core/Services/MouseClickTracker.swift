@@ -14,6 +14,7 @@ final class MouseClickTracker: ObservableObject {
 
     @Published private(set) var todayClicks = ClickBreakdown()
     @Published private(set) var dailyClicks: [DailyClickCount] = []
+    var hasStorageError: Bool { storageState.hasError }
 
     private let calendar = Calendar.current
     private let fileManager = FileManager.default
@@ -25,6 +26,7 @@ final class MouseClickTracker: ObservableObject {
     private var pendingSaveWorkItem: DispatchWorkItem?
     private var currentDay: Date?
     private var currentDayIndex: Int?
+    @Published private var storageState = StorageState.available
 
     init(currentDayProvider: CurrentDayProvider) {
         self.currentDayProvider = currentDayProvider
@@ -37,11 +39,12 @@ final class MouseClickTracker: ObservableObject {
     }
 
     /// 開発時のSwiftUIプレビュー用
-    init(previewClicks: [DailyClickCount]) {
+    init(previewClicks: [DailyClickCount], hasStorageError: Bool = false) {
         currentDayProvider = nil
         storageURL = nil
         dailyClicks = previewClicks
         todayClicks = clicks(for: .now)
+        storageState = hasStorageError ? .writeFailed : .available
     }
 
     deinit {
@@ -145,11 +148,19 @@ final class MouseClickTracker: ObservableObject {
     }
 
     private func loadDailyClicks() {
-        guard
-            let storageURL,
-            let data = try? Data(contentsOf: storageURL),
-            let decodedClicks = try? JSONDecoder().decode([DailyClickCount].self, from: data)
-        else {
+        guard let storageURL else {
+            return
+        }
+
+        guard let data = try? Data(contentsOf: storageURL) else {
+            storageState = fileManager.fileExists(atPath: storageURL.path)
+                ? .readFailed
+                : .available
+            return
+        }
+
+        guard let decodedClicks = try? JSONDecoder().decode([DailyClickCount].self, from: data) else {
+            storageState = .readFailed
             return
         }
 
@@ -187,17 +198,24 @@ final class MouseClickTracker: ObservableObject {
 
     @discardableResult
     private func saveDailyClicks() -> Bool {
+        guard storageState.allowsWriting else {
+            return false
+        }
+
         guard
             let storageURL,
             let data = try? JSONEncoder().encode(dailyClicks)
         else {
+            storageState = .writeFailed
             return false
         }
 
         do {
             try data.write(to: storageURL, options: .atomic)
+            storageState = .available
             return true
         } catch {
+            storageState = .writeFailed
             return false
         }
     }

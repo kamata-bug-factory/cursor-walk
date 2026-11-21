@@ -18,6 +18,7 @@ final class MouseTracker: ObservableObject {
 
     /// 今日を含む直近400日間の日別移動距離
     @Published private(set) var dailyDistances: [DailyDistance] = []
+    var hasStorageError: Bool { storageState.hasError }
     
     private let calendar = Calendar.current
     private let fileManager = FileManager.default
@@ -30,6 +31,7 @@ final class MouseTracker: ObservableObject {
     private var pendingSaveWorkItem: DispatchWorkItem?
     private var currentDay: Date?
     private var currentDayIndex: Int?
+    @Published private var storageState = StorageState.available
 
     /// 保存済みの日別距離を復元して、マウス移動の監視を開始する。
     init(currentDayProvider: CurrentDayProvider) {
@@ -45,11 +47,12 @@ final class MouseTracker: ObservableObject {
     /// 開発時のSwiftUIプレビュー用
     ///
     /// - Parameter previewDistances: 画面に表示する日別の移動距離。
-    init(previewDistances: [DailyDistance]) {
+    init(previewDistances: [DailyDistance], hasStorageError: Bool = false) {
         currentDayProvider = nil
         storageURL = nil
         dailyDistances = previewDistances
         totalPoints = points(for: .now)
+        storageState = hasStorageError ? .writeFailed : .available
     }
 
     /// イベント監視を解除し、未保存の距離をディスクへ書き込む。
@@ -186,11 +189,19 @@ final class MouseTracker: ObservableObject {
 
     /// Application Support内のJSONファイルから日別距離を復元する。
     private func loadDailyDistances() {
-        guard
-            let storageURL,
-            let data = try? Data(contentsOf: storageURL),
-            let decodedDistances = try? JSONDecoder().decode([DailyDistance].self, from: data)
-        else {
+        guard let storageURL else {
+            return
+        }
+
+        guard let data = try? Data(contentsOf: storageURL) else {
+            storageState = fileManager.fileExists(atPath: storageURL.path)
+                ? .readFailed
+                : .available
+            return
+        }
+
+        guard let decodedDistances = try? JSONDecoder().decode([DailyDistance].self, from: data) else {
+            storageState = .readFailed
             return
         }
 
@@ -229,17 +240,24 @@ final class MouseTracker: ObservableObject {
     /// - Returns: 保存に成功した場合は `true`。
     @discardableResult
     private func saveDailyDistances() -> Bool {
+        guard storageState.allowsWriting else {
+            return false
+        }
+
         guard
             let storageURL,
             let data = try? JSONEncoder().encode(dailyDistances)
         else {
+            storageState = .writeFailed
             return false
         }
 
         do {
             try data.write(to: storageURL, options: .atomic)
+            storageState = .available
             return true
         } catch {
+            storageState = .writeFailed
             return false
         }
     }

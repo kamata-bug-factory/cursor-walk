@@ -10,6 +10,7 @@ final class MouseScrollTracker: ObservableObject {
 
     @Published private(set) var todayPoints = 0.0
     @Published private(set) var dailyDistances: [DailyScrollInputDistance] = []
+    var hasStorageError: Bool { storageState.hasError }
 
     private let calendar = Calendar.current
     private let fileManager = FileManager.default
@@ -21,6 +22,7 @@ final class MouseScrollTracker: ObservableObject {
     private var pendingSaveWorkItem: DispatchWorkItem?
     private var currentDay: Date?
     private var currentDayIndex: Int?
+    @Published private var storageState = StorageState.available
 
     init(currentDayProvider: CurrentDayProvider) {
         self.currentDayProvider = currentDayProvider
@@ -33,11 +35,12 @@ final class MouseScrollTracker: ObservableObject {
     }
 
     /// 開発時のSwiftUIプレビュー用
-    init(previewDistances: [DailyScrollInputDistance]) {
+    init(previewDistances: [DailyScrollInputDistance], hasStorageError: Bool = false) {
         currentDayProvider = nil
         storageURL = nil
         dailyDistances = previewDistances
         todayPoints = points(for: .now)
+        storageState = hasStorageError ? .writeFailed : .available
     }
 
     deinit {
@@ -153,10 +156,19 @@ final class MouseScrollTracker: ObservableObject {
     }
 
     private func loadDailyDistances() {
-        guard let storageURL,
-              let data = try? Data(contentsOf: storageURL),
-              let decoded = try? JSONDecoder().decode([DailyScrollInputDistance].self, from: data)
-        else { return }
+        guard let storageURL else { return }
+
+        guard let data = try? Data(contentsOf: storageURL) else {
+            storageState = fileManager.fileExists(atPath: storageURL.path)
+                ? .readFailed
+                : .available
+            return
+        }
+
+        guard let decoded = try? JSONDecoder().decode([DailyScrollInputDistance].self, from: data) else {
+            storageState = .readFailed
+            return
+        }
 
         dailyDistances = decoded
         let today = calendar.startOfDay(for: .now)
@@ -185,14 +197,21 @@ final class MouseScrollTracker: ObservableObject {
 
     @discardableResult
     private func saveDailyDistances() -> Bool {
+        guard storageState.allowsWriting else { return false }
+
         guard let storageURL,
               let data = try? JSONEncoder().encode(dailyDistances)
-        else { return false }
+        else {
+            storageState = .writeFailed
+            return false
+        }
 
         do {
             try data.write(to: storageURL, options: .atomic)
+            storageState = .available
             return true
         } catch {
+            storageState = .writeFailed
             return false
         }
     }

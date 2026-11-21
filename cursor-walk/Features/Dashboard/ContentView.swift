@@ -122,6 +122,11 @@ private struct ScrollTabs: View {
             .tabItem { Label("月間", systemImage: "calendar") }
         }
         .frame(height: AppLayout.tabHeight)
+        .overlay(alignment: .topTrailing) {
+            if scrollTracker.hasStorageError {
+                StorageErrorBadge()
+            }
+        }
     }
 }
 
@@ -155,6 +160,11 @@ private struct DistanceTabs: View {
             }
         }
         .frame(height: AppLayout.tabHeight)
+        .overlay(alignment: .topTrailing) {
+            if mouseTracker.hasStorageError {
+                StorageErrorBadge()
+            }
+        }
     }
 }
 
@@ -188,6 +198,23 @@ private struct ClickTabs: View {
             }
         }
         .frame(height: AppLayout.tabHeight)
+        .overlay(alignment: .topTrailing) {
+            if clickTracker.hasStorageError {
+                StorageErrorBadge()
+            }
+        }
+    }
+}
+
+private struct StorageErrorBadge: View {
+    var body: some View {
+        Label("記録を保存できません", systemImage: "exclamationmark.triangle.fill")
+            .font(.caption)
+            .foregroundStyle(.red)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(.regularMaterial, in: Capsule())
+            .accessibilityLabel("記録を保存できません")
     }
 }
 
