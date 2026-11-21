@@ -22,6 +22,8 @@ final class MouseTracker: ObservableObject {
     private let calendar = Calendar.current
     private let fileManager = FileManager.default
     private let storageURL: URL?
+    private let currentDayProvider: CurrentDayProvider?
+    private var currentDayObserverID: CurrentDayProvider.ObserverID?
     private var lastLocation: NSPoint?
     private var globalMonitor: Any?
     private var localMonitor: Any?
@@ -30,16 +32,21 @@ final class MouseTracker: ObservableObject {
     private var currentDayIndex: Int?
 
     /// 保存済みの日別距離を復元して、マウス移動の監視を開始する。
-    init() {
+    init(currentDayProvider: CurrentDayProvider) {
+        self.currentDayProvider = currentDayProvider
         storageURL = Self.makeStorageURL(using: fileManager)
         loadDailyDistances()
+        currentDayObserverID = currentDayProvider.addObserver { [weak self] day in
+            self?.updateCurrentDay(to: day)
+        }
         startTracking()
     }
 
-    /// 監視やファイルへのアクセスを行わず、プレビュー用の記録を設定する。
+    /// 開発時のSwiftUIプレビュー用
     ///
     /// - Parameter previewDistances: 画面に表示する日別の移動距離。
     init(previewDistances: [DailyDistance]) {
+        currentDayProvider = nil
         storageURL = nil
         dailyDistances = previewDistances
         totalPoints = points(for: .now)
@@ -47,6 +54,7 @@ final class MouseTracker: ObservableObject {
 
     /// イベント監視を解除し、未保存の距離をディスクへ書き込む。
     deinit {
+        currentDayProvider?.removeObserver(currentDayObserverID)
         stopTracking()
         pendingSaveWorkItem?.cancel()
         saveDailyDistances()
@@ -129,6 +137,7 @@ final class MouseTracker: ObservableObject {
     ///   - distance: 加算する移動距離（ポイント）。
     ///   - date: 距離を記録する日時。
     private func record(distance: Double, at date: Date) {
+        currentDayProvider?.refresh(at: date)
         let day = calendar.startOfDay(for: date)
         guard let index = indexForCurrentDay(day) else {
             return
@@ -137,6 +146,12 @@ final class MouseTracker: ObservableObject {
         dailyDistances[index].points += distance
         totalPoints = dailyDistances[index].points
         scheduleSave()
+    }
+
+    private func updateCurrentDay(to day: Date) {
+        currentDay = day
+        currentDayIndex = dailyDistances.firstIndex(where: { $0.day == day })
+        totalPoints = currentDayIndex.map { dailyDistances[$0].points } ?? 0
     }
 
     /// 当日の記録位置を返す。履歴の整理と検索は日付が変わったときだけ行う。

@@ -14,25 +14,34 @@ final class MouseScrollTracker: ObservableObject {
     private let calendar = Calendar.current
     private let fileManager = FileManager.default
     private let storageURL: URL?
+    private let currentDayProvider: CurrentDayProvider?
+    private var currentDayObserverID: CurrentDayProvider.ObserverID?
     private var globalMonitor: Any?
     private var localMonitor: Any?
     private var pendingSaveWorkItem: DispatchWorkItem?
     private var currentDay: Date?
     private var currentDayIndex: Int?
 
-    init() {
+    init(currentDayProvider: CurrentDayProvider) {
+        self.currentDayProvider = currentDayProvider
         storageURL = Self.makeStorageURL(using: fileManager)
         loadDailyDistances()
+        currentDayObserverID = currentDayProvider.addObserver { [weak self] day in
+            self?.updateCurrentDay(to: day)
+        }
         startTracking()
     }
 
+    /// 開発時のSwiftUIプレビュー用
     init(previewDistances: [DailyScrollDistance]) {
+        currentDayProvider = nil
         storageURL = nil
         dailyDistances = previewDistances
         todayPoints = points(for: .now)
     }
 
     deinit {
+        currentDayProvider?.removeObserver(currentDayObserverID)
         stopTracking()
         pendingSaveWorkItem?.cancel()
         saveDailyDistances()
@@ -110,12 +119,19 @@ final class MouseScrollTracker: ObservableObject {
     }
 
     private func record(points: Double, at date: Date) {
+        currentDayProvider?.refresh(at: date)
         let day = calendar.startOfDay(for: date)
         guard let index = indexForCurrentDay(day) else { return }
 
         dailyDistances[index].points += points
         todayPoints = dailyDistances[index].points
         scheduleSave()
+    }
+
+    private func updateCurrentDay(to day: Date) {
+        currentDay = day
+        currentDayIndex = dailyDistances.firstIndex(where: { $0.day == day })
+        todayPoints = currentDayIndex.map { dailyDistances[$0].points } ?? 0
     }
 
     private func indexForCurrentDay(_ day: Date) -> Int? {

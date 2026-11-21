@@ -5,9 +5,10 @@ import SwiftUI
 @MainActor
 final class StatusBarController: NSObject, NSApplicationDelegate {
     private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
-    private lazy var mouseTracker = MouseTracker()
-    private lazy var clickTracker = MouseClickTracker()
-    private lazy var scrollTracker = MouseScrollTracker()
+    private let currentDayProvider = CurrentDayProvider()
+    private lazy var mouseTracker = MouseTracker(currentDayProvider: currentDayProvider)
+    private lazy var clickTracker = MouseClickTracker(currentDayProvider: currentDayProvider)
+    private lazy var scrollTracker = MouseScrollTracker(currentDayProvider: currentDayProvider)
     private var statusItem: NSStatusItem?
     private let popover = NSPopover()
 

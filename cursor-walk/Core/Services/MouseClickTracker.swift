@@ -18,25 +18,34 @@ final class MouseClickTracker: ObservableObject {
     private let calendar = Calendar.current
     private let fileManager = FileManager.default
     private let storageURL: URL?
+    private let currentDayProvider: CurrentDayProvider?
+    private var currentDayObserverID: CurrentDayProvider.ObserverID?
     private var globalMonitor: Any?
     private var localMonitor: Any?
     private var pendingSaveWorkItem: DispatchWorkItem?
     private var currentDay: Date?
     private var currentDayIndex: Int?
 
-    init() {
+    init(currentDayProvider: CurrentDayProvider) {
+        self.currentDayProvider = currentDayProvider
         storageURL = Self.makeStorageURL(using: fileManager)
         loadDailyClicks()
+        currentDayObserverID = currentDayProvider.addObserver { [weak self] day in
+            self?.updateCurrentDay(to: day)
+        }
         startTracking()
     }
 
+    /// 開発時のSwiftUIプレビュー用
     init(previewClicks: [DailyClickCount]) {
+        currentDayProvider = nil
         storageURL = nil
         dailyClicks = previewClicks
         todayClicks = clicks(for: .now)
     }
 
     deinit {
+        currentDayProvider?.removeObserver(currentDayObserverID)
         stopTracking()
         pendingSaveWorkItem?.cancel()
         saveDailyClicks()
@@ -93,6 +102,7 @@ final class MouseClickTracker: ObservableObject {
     }
 
     private func record(buttonNumber: Int, at date: Date) {
+        currentDayProvider?.refresh(at: date)
         let day = calendar.startOfDay(for: date)
         guard let index = indexForCurrentDay(day) else {
             return
@@ -101,6 +111,12 @@ final class MouseClickTracker: ObservableObject {
         dailyClicks[index].clicks.record(buttonNumber: buttonNumber)
         todayClicks = dailyClicks[index].clicks
         scheduleSave()
+    }
+
+    private func updateCurrentDay(to day: Date) {
+        currentDay = day
+        currentDayIndex = dailyClicks.firstIndex(where: { $0.day == day })
+        todayClicks = currentDayIndex.map { dailyClicks[$0].clicks } ?? ClickBreakdown()
     }
 
     private func indexForCurrentDay(_ day: Date) -> Int? {
