@@ -45,14 +45,15 @@ private enum DashboardPreviewData {
         }
     }
 
-    static var dailyScrollDistances: [DailyScrollInputDistance] {
+    static var dailyScrollInputs: [DailyScrollInput] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: .now)
         return (0..<30).compactMap { offset in
             guard let day = calendar.date(byAdding: .day, value: offset - 29, to: today) else {
                 return nil
             }
-            return DailyScrollInputDistance(day: day, points: Double(8_000 + offset * 1_700))
+            let rotations = Double(20 + offset * 4)
+            return DailyScrollInput(day: day, lineUnits: rotations * 3 * 24)
         }
     }
 }
@@ -67,7 +68,7 @@ private struct ContentViewPreview: View {
         selectedMetric: MeasurementMetric,
         dailyDistances: [DailyDistance],
         dailyClicks: [DailyClickCount],
-        dailyScrollDistances: [DailyScrollInputDistance] = DashboardPreviewData.dailyScrollDistances,
+        dailyScrollInputs: [DailyScrollInput] = DashboardPreviewData.dailyScrollInputs,
         hasStorageError: Bool = false
     ) {
         self.selectedMetric = selectedMetric
@@ -85,7 +86,7 @@ private struct ContentViewPreview: View {
         )
         _scrollTracker = StateObject(
             wrappedValue: MouseScrollTracker(
-                previewDistances: dailyScrollDistances,
+                previewInputs: dailyScrollInputs,
                 hasStorageError: hasStorageError
             )
         )
@@ -119,7 +120,7 @@ private struct ContentViewPreview: View {
     )
 }
 
-#Preview("スクロール操作量・記録あり") {
+#Preview("推定スクロール回転数・記録あり") {
     ContentViewPreview(
         selectedMetric: .scrolls,
         dailyDistances: DashboardPreviewData.dailyDistances,
@@ -152,11 +153,11 @@ private struct ContentViewPreview: View {
     )
 }
 
-#Preview("スクロール操作量・記録なし") {
+#Preview("推定スクロール回転数・記録なし") {
     ContentViewPreview(
         selectedMetric: .scrolls,
         dailyDistances: [],
         dailyClicks: [],
-        dailyScrollDistances: []
+        dailyScrollInputs: []
     )
 }

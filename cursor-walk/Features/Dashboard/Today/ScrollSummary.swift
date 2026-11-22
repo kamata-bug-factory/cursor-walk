@@ -8,12 +8,12 @@ struct ScrollSummary: View {
         .locale(Locale(identifier: "ja_JP"))
 
     let date: Date
-    let points: Double
+    let lineUnits: Double
 
     var body: some View {
         TodaySummary(
-            title: "\(date.formatted(Self.dateStyle))のスクロール操作量",
-            primaryValue: ScrollActivityFormatter.formatted(points)
+            title: "\(date.formatted(Self.dateStyle))の推定スクロール回転数",
+            primaryValue: ScrollRotationFormatter.formatted(lineUnits: lineUnits)
         ) {
             EmptyView()
         }

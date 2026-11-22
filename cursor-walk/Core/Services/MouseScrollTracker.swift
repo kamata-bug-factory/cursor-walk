@@ -2,20 +2,22 @@ import AppKit
 import Combine
 import Foundation
 
-/// スクロール操作量を論理ポイントへ換算して計測し、日別に保存する。
+/// スクロール操作量を行相当量へ正規化し、日別に保存する。
 @MainActor
 final class MouseScrollTracker: ObservableObject {
     private static let retentionDays = 400
     private static let saveDelay: TimeInterval = 1
-    private static let fallbackBackingScaleFactor: CGFloat = 2
+    // Apple documents the default scale as approximately 10 pixels per line.
+    // https://developer.apple.com/documentation/coregraphics/cgeventsource/pixelsperline
+    private static let fallbackPixelsPerLine = 10.0
 
-    @Published private(set) var todayPoints = 0.0
-    @Published private(set) var dailyDistances: [DailyScrollInputDistance] = []
+    @Published private(set) var todayLineUnits = 0.0
+    @Published private(set) var dailyInputs: [DailyScrollInput] = []
     var hasStorageError: Bool { storageState.hasError }
 
     private let calendar = Calendar.autoupdatingCurrent
     private let fileManager = FileManager.default
-    private let storage: JSONFileStorage<[DailyScrollInputDistance]>?
+    private let storage: JSONFileStorage<[DailyScrollInput]>?
     private let currentDayProvider: CurrentDayProvider?
     private var currentDayObserverID: CurrentDayProvider.ObserverID?
     private var globalMonitor: Any?
@@ -28,7 +30,7 @@ final class MouseScrollTracker: ObservableObject {
     init(currentDayProvider: CurrentDayProvider) {
         self.currentDayProvider = currentDayProvider
         storage = Self.makeStorageURL(using: fileManager).map(JSONFileStorage.init(url:))
-        loadDailyDistances()
+        loadDailyInputs()
         currentDayObserverID = currentDayProvider.addObserver { [weak self] day in
             self?.updateCurrentDay(to: day)
         }
@@ -36,11 +38,11 @@ final class MouseScrollTracker: ObservableObject {
     }
 
     /// 開発時のSwiftUIプレビュー用
-    init(previewDistances: [DailyScrollInputDistance], hasStorageError: Bool = false) {
+    init(previewInputs: [DailyScrollInput], hasStorageError: Bool = false) {
         currentDayProvider = nil
         storage = nil
-        dailyDistances = previewDistances
-        todayPoints = points(for: .now)
+        dailyInputs = previewInputs
+        todayLineUnits = lineUnits(for: .now)
         storageState = hasStorageError ? .writeFailed : .available
     }
 
@@ -48,7 +50,7 @@ final class MouseScrollTracker: ObservableObject {
         currentDayProvider?.removeObserver(currentDayObserverID)
         stopTracking()
         pendingSaveWorkItem?.cancel()
-        saveDailyDistances()
+        saveDailyInputs()
     }
 
     /// アプリ内外の縦・横方向のスクロール操作を監視する。
@@ -78,64 +80,60 @@ final class MouseScrollTracker: ObservableObject {
     func saveBeforeQuitting() -> Bool {
         pendingSaveWorkItem?.cancel()
         pendingSaveWorkItem = nil
-        return saveDailyDistances()
+        return saveDailyInputs()
     }
 
-    func points(for date: Date) -> Double {
+    func lineUnits(for date: Date) -> Double {
         let day = calendar.startOfDay(for: date)
-        return dailyDistances.first(where: { calendar.isDate($0.day, inSameDayAs: day) })?.points ?? 0
+        return dailyInputs.first(where: { calendar.isDate($0.day, inSameDayAs: day) })?.lineUnits ?? 0
     }
 
     private func handleScroll(_ event: NSEvent) {
-        guard let points = scrollPoints(for: event) else { return }
-        guard points > 0 else { return }
+        guard let lineUnits = scrollLineUnits(for: event) else { return }
+        guard lineUnits > 0 else { return }
 
-        record(points: points, at: .now)
+        record(lineUnits: lineUnits, at: .now)
     }
 
-    /// 精密差分は各軸の絶対値を加算し、通常ホイールのピクセル差分は論理ポイントへ変換する。
-    private func scrollPoints(for event: NSEvent) -> Double? {
-        if event.hasPreciseScrollingDeltas {
-            return abs(Double(event.scrollingDeltaX)) + abs(Double(event.scrollingDeltaY))
-        }
-
+    /// ピクセル差分をイベントソースの1行あたりのピクセル数で正規化する。
+    private func scrollLineUnits(for event: NSEvent) -> Double? {
         guard let cgEvent = event.cgEvent else { return nil }
-        let horizontalPixelDelta = Double(
-            cgEvent.getIntegerValueField(.scrollWheelEventPointDeltaAxis2)
-        )
-        let verticalPixelDelta = Double(
-            cgEvent.getIntegerValueField(.scrollWheelEventPointDeltaAxis1)
-        )
 
-        let scale = screenUnderPointer?.backingScaleFactor
-            ?? NSScreen.main?.backingScaleFactor
-            ?? Self.fallbackBackingScaleFactor
-        return (abs(horizontalPixelDelta) + abs(verticalPixelDelta)) / scale
-    }
-
-    private var screenUnderPointer: NSScreen? {
-        let mouseLocation = NSEvent.mouseLocation
-        return NSScreen.screens.first {
-            NSMouseInRect(mouseLocation, $0.frame, false)
+        let pixelDelta: Double
+        if event.hasPreciseScrollingDeltas {
+            pixelDelta = abs(Double(event.scrollingDeltaX)) + abs(Double(event.scrollingDeltaY))
+        } else {
+            let horizontalPixelDelta = Double(
+                cgEvent.getIntegerValueField(.scrollWheelEventPointDeltaAxis2)
+            )
+            let verticalPixelDelta = Double(
+                cgEvent.getIntegerValueField(.scrollWheelEventPointDeltaAxis1)
+            )
+            pixelDelta = abs(horizontalPixelDelta) + abs(verticalPixelDelta)
         }
+
+        let sourcePixelsPerLine = CGEventSource(event: cgEvent)?.pixelsPerLine
+        let pixelsPerLine = sourcePixelsPerLine.flatMap { $0 > 0 ? $0 : nil }
+            ?? Self.fallbackPixelsPerLine
+        return pixelDelta / pixelsPerLine
     }
 
-    private func record(points: Double, at date: Date) {
+    private func record(lineUnits: Double, at date: Date) {
         currentDayProvider?.refresh(at: date)
         let day = calendar.startOfDay(for: date)
         guard let index = indexForCurrentDay(day) else { return }
 
-        dailyDistances[index].points += points
-        todayPoints = dailyDistances[index].points
+        dailyInputs[index].lineUnits += lineUnits
+        todayLineUnits = dailyInputs[index].lineUnits
         scheduleSave()
     }
 
     private func updateCurrentDay(to day: Date) {
         currentDay = day
-        currentDayIndex = dailyDistances.firstIndex {
+        currentDayIndex = dailyInputs.firstIndex {
             calendar.isDate($0.day, inSameDayAs: day)
         }
-        todayPoints = currentDayIndex.map { dailyDistances[$0].points } ?? 0
+        todayLineUnits = currentDayIndex.map { dailyInputs[$0].lineUnits } ?? 0
     }
 
     private func indexForCurrentDay(_ day: Date) -> Int? {
@@ -144,9 +142,9 @@ final class MouseScrollTracker: ObservableObject {
            let currentDayIndex {
             return currentDayIndex
         }
-        pruneDistances(keepingFrom: day)
+        pruneInputs(keepingFrom: day)
 
-        if let index = dailyDistances.firstIndex(where: {
+        if let index = dailyInputs.firstIndex(where: {
             calendar.isDate($0.day, inSameDayAs: day)
         }) {
             currentDay = day
@@ -154,9 +152,9 @@ final class MouseScrollTracker: ObservableObject {
             return index
         }
 
-        dailyDistances.append(DailyScrollInputDistance(day: day, points: 0))
-        dailyDistances.sort { $0.day < $1.day }
-        guard let index = dailyDistances.firstIndex(where: {
+        dailyInputs.append(DailyScrollInput(day: day, lineUnits: 0))
+        dailyInputs.sort { $0.day < $1.day }
+        guard let index = dailyInputs.firstIndex(where: {
             calendar.isDate($0.day, inSameDayAs: day)
         }) else { return nil }
         currentDay = day
@@ -164,7 +162,7 @@ final class MouseScrollTracker: ObservableObject {
         return index
     }
 
-    private func loadDailyDistances() {
+    private func loadDailyInputs() {
         guard let storage else { return }
 
         guard let decoded = try? storage.load() else {
@@ -174,38 +172,38 @@ final class MouseScrollTracker: ObservableObject {
             return
         }
 
-        dailyDistances = decoded
+        dailyInputs = decoded
         let today = calendar.startOfDay(for: .now)
-        pruneDistances(keepingFrom: today)
-        if let index = dailyDistances.firstIndex(where: {
+        pruneInputs(keepingFrom: today)
+        if let index = dailyInputs.firstIndex(where: {
             calendar.isDate($0.day, inSameDayAs: today)
         }) {
             currentDay = today
             currentDayIndex = index
-            todayPoints = dailyDistances[index].points
+            todayLineUnits = dailyInputs[index].lineUnits
         }
     }
 
-    private func pruneDistances(keepingFrom currentDay: Date) {
+    private func pruneInputs(keepingFrom currentDay: Date) {
         guard let earliestDay = calendar.date(
             byAdding: .day,
             value: -(Self.retentionDays - 1),
             to: currentDay
         ) else { return }
 
-        let retained = dailyDistances
+        let retained = dailyInputs
             .filter {
                 calendar.compare($0.day, to: earliestDay, toGranularity: .day) != .orderedAscending
                     && calendar.compare($0.day, to: currentDay, toGranularity: .day) != .orderedDescending
             }
             .sorted { $0.day < $1.day }
-        guard retained != dailyDistances else { return }
-        dailyDistances = retained
-        _ = saveDailyDistances()
+        guard retained != dailyInputs else { return }
+        dailyInputs = retained
+        _ = saveDailyInputs()
     }
 
     @discardableResult
-    private func saveDailyDistances() -> Bool {
+    private func saveDailyInputs() -> Bool {
         guard storageState.allowsWriting else { return false }
 
         guard let storage else {
@@ -214,7 +212,7 @@ final class MouseScrollTracker: ObservableObject {
         }
 
         do {
-            try storage.save(dailyDistances)
+            try storage.save(dailyInputs)
             storageState = .available
             return true
         } catch {
@@ -225,7 +223,7 @@ final class MouseScrollTracker: ObservableObject {
 
     private func scheduleSave() {
         pendingSaveWorkItem?.cancel()
-        let workItem = DispatchWorkItem { [weak self] in self?.saveDailyDistances() }
+        let workItem = DispatchWorkItem { [weak self] in self?.saveDailyInputs() }
         pendingSaveWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.saveDelay, execute: workItem)
     }
@@ -241,7 +239,7 @@ final class MouseScrollTracker: ObservableObject {
         let directoryURL = supportURL.appendingPathComponent("cursor-walk", isDirectory: true)
         do {
             try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
-            return directoryURL.appendingPathComponent("daily-scroll-input-distances.json")
+            return directoryURL.appendingPathComponent("daily-scroll-inputs.json")
         } catch {
             return nil
         }

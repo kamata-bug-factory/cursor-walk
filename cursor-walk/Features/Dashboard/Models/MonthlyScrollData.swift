@@ -1,50 +1,50 @@
 import Foundation
 
-/// 本日以外の日別スクロール操作量と、色の強度を決める境界値。
+/// 本日以外の日別スクロール行相当量と、色の強度を決める境界値。
 struct MonthlyScrollHistory {
-    private let pointsByDay: [Date: Double]
+    private let lineUnitsByDay: [Date: Double]
     private let intensityScale: HeatmapIntensityScale<Double>
 
     init(
-        dailyDistances: [DailyScrollInputDistance],
+        dailyInputs: [DailyScrollInput],
         calendar: Calendar = .current,
         referenceDate: Date = .now
     ) {
         let referenceDay = calendar.startOfDay(for: referenceDate)
-        let pointsByDay = dailyDistances.reduce(into: [Date: Double]()) { result, record in
+        let lineUnitsByDay = dailyInputs.reduce(into: [Date: Double]()) { result, record in
             let day = calendar.startOfDay(for: record.day)
             guard day != referenceDay else {
                 return
             }
             if result[day] == nil {
-                result[day] = record.points
+                result[day] = record.lineUnits
             }
         }
 
-        self.pointsByDay = pointsByDay
+        self.lineUnitsByDay = lineUnitsByDay
         intensityScale = HeatmapIntensityScale(
-            positiveValues: pointsByDay.values.filter { $0 > 0 }
+            positiveValues: lineUnitsByDay.values.filter { $0 > 0 }
         )
     }
 
-    func points(for day: Date, calendar: Calendar) -> Double {
-        pointsByDay[calendar.startOfDay(for: day)] ?? 0
+    func lineUnits(for day: Date, calendar: Calendar) -> Double {
+        lineUnitsByDay[calendar.startOfDay(for: day)] ?? 0
     }
 
-    func intensityLevel(for points: Double) -> Int {
-        intensityScale.level(for: points, hasValue: points > 0)
+    func intensityLevel(for lineUnits: Double) -> Int {
+        intensityScale.level(for: lineUnits, hasValue: lineUnits > 0)
     }
 }
 
 struct MonthlyScrollData {
     let month: Date
     let days: [MonthlyScrollDay]
-    let totalPoints: Double
+    let totalLineUnits: Double
 
     init(
         month: Date,
         history: MonthlyScrollHistory,
-        currentDayPoints: Double,
+        currentDayLineUnits: Double,
         calendar: Calendar = .current,
         referenceDate: Date = .now
     ) {
@@ -54,30 +54,30 @@ struct MonthlyScrollData {
         self.month = grid.month
         days = grid.days.map { gridDay in
             let day = calendar.startOfDay(for: gridDay.date)
-            let points = day == referenceDay
-                ? currentDayPoints
-                : history.points(for: day, calendar: calendar)
+            let lineUnits = day == referenceDay
+                ? currentDayLineUnits
+                : history.lineUnits(for: day, calendar: calendar)
 
             return MonthlyScrollDay(
                 date: gridDay.date,
-                points: points,
-                intensityLevel: history.intensityLevel(for: points),
+                lineUnits: lineUnits,
+                intensityLevel: history.intensityLevel(for: lineUnits),
                 isInDisplayedMonth: gridDay.isInDisplayedMonth
             )
         }
-        totalPoints = days
+        totalLineUnits = days
             .filter(\.isInDisplayedMonth)
-            .map(\.points)
+            .map(\.lineUnits)
             .reduce(0, +)
     }
 }
 
 struct MonthlyScrollDay: Identifiable {
     let date: Date
-    let points: Double
+    let lineUnits: Double
     let intensityLevel: Int
     let isInDisplayedMonth: Bool
 
     var id: Date { date }
-    var hasValue: Bool { points > 0 }
+    var hasValue: Bool { lineUnits > 0 }
 }

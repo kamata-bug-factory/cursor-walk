@@ -1,20 +1,20 @@
 import SwiftUI
 
 struct MonthlyScrollHeatmap: View {
-    let dailyDistances: [DailyScrollInputDistance]
-    let currentDayPoints: Double
+    let dailyInputs: [DailyScrollInput]
+    let currentDayLineUnits: Double
     @State private var displayedMonth: Date
     @State private var history: MonthlyScrollHistory
 
-    init(dailyDistances: [DailyScrollInputDistance], currentDayPoints: Double) {
+    init(dailyInputs: [DailyScrollInput], currentDayLineUnits: Double) {
         let referenceDate = Date.now
-        self.dailyDistances = dailyDistances
-        self.currentDayPoints = currentDayPoints
+        self.dailyInputs = dailyInputs
+        self.currentDayLineUnits = currentDayLineUnits
         _displayedMonth = State(
             initialValue: Calendar.current.dateInterval(of: .month, for: referenceDate)?.start ?? referenceDate
         )
         _history = State(
-            initialValue: MonthlyScrollHistory(dailyDistances: dailyDistances, referenceDate: referenceDate)
+            initialValue: MonthlyScrollHistory(dailyInputs: dailyInputs, referenceDate: referenceDate)
         )
     }
 
@@ -22,7 +22,7 @@ struct MonthlyScrollHeatmap: View {
         let data = MonthlyScrollData(
             month: displayedMonth,
             history: history,
-            currentDayPoints: currentDayPoints
+            currentDayLineUnits: currentDayLineUnits
         )
 
         MonthlyHeatmap(
@@ -32,25 +32,25 @@ struct MonthlyScrollHeatmap: View {
             intensityLevel: \.intensityLevel,
             isInDisplayedMonth: \.isInDisplayedMonth,
             hasValue: \.hasValue,
-            totalText: "合計 \(ScrollActivityFormatter.formatted(data.totalPoints))",
-            legendAccessibilityLabel: "スクロール操作量の色。薄いほど少なく、濃いほど多い",
+            totalText: "合計 \(ScrollRotationFormatter.formatted(lineUnits: data.totalLineUnits))",
+            legendAccessibilityLabel: "推定スクロール回転数の色。薄いほど少なく、濃いほど多い",
             canMoveBackward: displayedMonth > earliestMonth,
             canMoveForward: displayedMonth < currentMonth,
             moveBackward: { moveMonth(by: -1) },
             moveForward: { moveMonth(by: 1) },
-            accessibilityValue: { ScrollActivityFormatter.formatted($0.points) }
+            accessibilityValue: { ScrollRotationFormatter.formatted(lineUnits: $0.lineUnits) }
         ) { day in
-            Text("\(DateDisplayFormatter.yearMonthDayWeekday(from: day.date)) \(ScrollActivityFormatter.formatted(day.points))")
+            Text("\(DateDisplayFormatter.yearMonthDayWeekday(from: day.date)) \(ScrollRotationFormatter.formatted(lineUnits: day.lineUnits))")
                 .font(.caption)
                 .tooltipStyle()
         }
         .onChange(of: latestRecordedDay) {
-            history = MonthlyScrollHistory(dailyDistances: dailyDistances)
+            history = MonthlyScrollHistory(dailyInputs: dailyInputs)
         }
     }
 
     private var latestRecordedDay: Date? {
-        dailyDistances.last.map { Calendar.current.startOfDay(for: $0.day) }
+        dailyInputs.last.map { Calendar.current.startOfDay(for: $0.day) }
     }
     private var currentMonth: Date {
         Calendar.current.dateInterval(of: .month, for: .now)?.start ?? .now

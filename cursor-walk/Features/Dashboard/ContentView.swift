@@ -95,7 +95,7 @@ enum MeasurementMetric: String, CaseIterable, Identifiable {
         case .clicks:
             "クリック回数"
         case .scrolls:
-            "スクロール操作量"
+            "推定スクロール回転数"
         }
     }
 }
@@ -104,20 +104,20 @@ private struct ScrollTabs: View {
     @ObservedObject var scrollTracker: MouseScrollTracker
 
     var body: some View {
-        let weeklyData = WeeklyScrollData(pointsForDate: scrollTracker.points(for:))
+        let weeklyData = WeeklyScrollData(lineUnitsForDate: scrollTracker.lineUnits(for:))
 
         TabView {
-            ScrollSummary(date: .now, points: scrollTracker.todayPoints)
+            ScrollSummary(date: .now, lineUnits: scrollTracker.todayLineUnits)
                 .tabItem { Label("本日", systemImage: "computermouse.and.arrowtriangle_2_outward") }
             WeeklyScrollChart(
                 currentWeek: weeklyData.currentWeek,
                 previousWeek: weeklyData.previousWeek,
-                totalPoints: weeklyData.totalPoints
+                totalLineUnits: weeklyData.totalLineUnits
             )
             .tabItem { Label("週間", systemImage: "chart.bar") }
             MonthlyScrollHeatmap(
-                dailyDistances: scrollTracker.dailyDistances,
-                currentDayPoints: scrollTracker.todayPoints
+                dailyInputs: scrollTracker.dailyInputs,
+                currentDayLineUnits: scrollTracker.todayLineUnits
             )
             .tabItem { Label("月間", systemImage: "calendar") }
         }

@@ -1,26 +1,25 @@
 import SwiftUI
 
 struct WeeklyScrollChart: View {
-    let currentWeek: [DailyScrollInputDistance]
-    let previousWeek: [DailyScrollInputDistance]
-    let totalPoints: Double
+    let currentWeek: [DailyScrollInput]
+    let previousWeek: [DailyScrollInput]
+    let totalLineUnits: Double
 
     private var comparisons: [DailyScrollComparison] {
         zip(currentWeek, previousWeek).map {
             DailyScrollComparison(
                 day: $0.day,
-                currentPoints: $0.points,
-                previousPoints: $1.points,
-                currentValue: $0.points,
-                previousValue: $1.points
+                currentRotations: ScrollRotationFormatter.rotations(from: $0.lineUnits),
+                previousRotations: ScrollRotationFormatter.rotations(from: $1.lineUnits),
+                currentValue: ScrollRotationFormatter.rotations(from: $0.lineUnits),
+                previousValue: ScrollRotationFormatter.rotations(from: $1.lineUnits)
             )
         }
     }
 
     private var axis: DistanceAxisConfiguration {
-        DistanceAxisConfiguration(
-            maximumValue: comparisons.flatMap { [$0.currentValue, $0.previousValue] }.max() ?? 0
-        )
+        let maximumValue = comparisons.flatMap { [$0.currentValue, $0.previousValue] }.max() ?? 0
+        return DistanceAxisConfiguration(maximumValue: max(maximumValue, 1))
     }
 
     var body: some View {
@@ -31,9 +30,9 @@ struct WeeklyScrollChart: View {
             previousValue: \.previousValue,
             currentStyle: \.currentStyle,
             previousStyle: AnyShapeStyle(Color.secondary.opacity(0.32)),
-            totalText: "合計 \(ScrollActivityFormatter.formatted(totalPoints))",
-            valueName: "スクロール操作量",
-            yAxisLabel: "スクロール操作量",
+            totalText: "合計 \(ScrollRotationFormatter.formatted(lineUnits: totalLineUnits))",
+            valueName: "推定スクロール回転数",
+            yAxisLabel: "推定スクロール回転数（回）",
             yAxisUpperBound: axis.upperBound,
             yAxisValues: axis.values,
             tooltipCenterYOffset: 38
@@ -42,13 +41,13 @@ struct WeeklyScrollChart: View {
                 Text(DateDisplayFormatter.monthDayWeekday(from: item.day))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-                Text(ScrollActivityFormatter.formatted(item.currentPoints))
+                Text("\(item.currentRotations.formatted(.number.precision(.fractionLength(2))))回転")
                     .font(.caption.weight(.semibold))
-                Text("先週 \(ScrollActivityFormatter.formatted(item.previousPoints))")
+                Text("先週 \(item.previousRotations.formatted(.number.precision(.fractionLength(2))))回転")
                     .font(.caption2)
                 Text(WeeklyComparisonFormatter.formatted(
-                    current: item.currentPoints,
-                    previous: item.previousPoints,
+                    current: item.currentRotations,
+                    previous: item.previousRotations,
                     on: item.day
                 ))
                     .font(.caption2.weight(.semibold))
@@ -62,8 +61,8 @@ struct WeeklyScrollChart: View {
 
 private struct DailyScrollComparison: Identifiable {
     let day: Date
-    let currentPoints: Double
-    let previousPoints: Double
+    let currentRotations: Double
+    let previousRotations: Double
     let currentValue: Double
     let previousValue: Double
     var id: Date { day }
